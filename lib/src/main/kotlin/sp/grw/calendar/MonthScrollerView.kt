@@ -1,12 +1,15 @@
 package sp.grw.calendar
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.view.MotionEvent
 import android.view.View
 import java.util.Calendar
+import kotlin.math.absoluteValue
 import sp.grw.calendar.entity.Payload
 import sp.grw.calendar.entity.YearMonth
 import sp.grw.calendar.entity.YearMonthDay
@@ -215,6 +218,16 @@ class MonthScrollerView(context: Context) : View(context) {
         invalidate()
     }
 
+    private var payload: Payload = Payload(emptyMap())
+    fun setPayload(value: Map<Int, Map<Int, Map<Int, String>>>) {
+        payload = Payload(value)
+        yearMonthCurrent = getYearMonthDefault(
+            payload = payload,
+            isEmptyMonthsSkipped = isEmptyMonthsSkipped,
+            isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
+        )
+        invalidate()
+    }
     private var isPayloadDrawn: Boolean = false
     fun toDrawnPayload(value: Boolean) {
         isPayloadDrawn = value
@@ -244,6 +257,11 @@ class MonthScrollerView(context: Context) : View(context) {
     private val payloadBackgroundPaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG)
     fun setPayloadBackgroundColor(value: Int) {
         payloadBackgroundPaint.color = value
+        invalidate()
+    }
+    private var isPayloadEmptySelectable: Boolean = false
+    fun toSelectPayloadEmpty(value: Boolean) {
+        isPayloadEmptySelectable = value
         invalidate()
     }
 
@@ -291,17 +309,6 @@ class MonthScrollerView(context: Context) : View(context) {
         invalidate()
     }
 
-    private var payload: Payload = Payload(emptyMap())
-    fun setPayload(value: Map<Int, Map<Int, Map<Int, String>>>) {
-        payload = Payload(value)
-        yearMonthCurrent = getYearMonthDefault(
-            payload = payload,
-            isEmptyMonthsSkipped = isEmptyMonthsSkipped,
-            isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
-        )
-        invalidate()
-    }
-
     private var lineTypeHorizontal: LineTypeHorizontal = LineTypeHorizontal.NONE
     fun setLineTypeHorizontal(value: LineTypeHorizontal) {
         lineTypeHorizontal = value
@@ -330,10 +337,33 @@ class MonthScrollerView(context: Context) : View(context) {
         invalidate()
     }
 
-    private var cellWidth = 0f
-    private var xOffset = 0f
+    var onMonthChange: (year: Int, month: Int) -> Unit = { _, _ -> } // todo
+
+    private var isSelectedDateChanged: Boolean = false
+    fun toChangeSelectedDate(value: Boolean) {
+        isSelectedDateChanged = value
+        invalidate()
+    }
+    var onSelectDate: (year: Int, month: Int, dayOfMonth: Int) -> Unit = { _, _, _ -> } // todo
+
     private var dateSelected: YearMonthDay? = null
     private var yearMonthCurrent: YearMonth? = null
+    private var cellWidth = 0f
+    private var xOffset = 0f
+    private var startedTrackingXOffset = 0f
+    private var animatorX: ObjectAnimator? = null
+
+    private fun startAnimateXOffset(to: Float) {
+        animatorX?.cancel()
+        animatorX = ObjectAnimator.ofFloat(this, "xOffset", xOffset, to)
+            .setDuration(250)
+            .also { it.start() }
+    }
+    // todo proguard
+    private fun setXOffset(value: Float) {
+        xOffset = value
+        invalidate()
+    }
 
     private fun getCellHeight(): Float {
         return if (isPayloadDrawn) {
@@ -596,6 +626,103 @@ class MonthScrollerView(context: Context) : View(context) {
                     monthTarget = next.month
                 )
             }
+        }
+    }
+
+    private fun onTouchDown(x: Float): Boolean {
+        startedTrackingXOffset = xOffset - x
+        return true
+    }
+    private var isMoveStarted = false
+    private fun onTouchMove(x: Float): Boolean {
+        val dX = xOffset - startedTrackingXOffset - x
+        if (!isMoveStarted) {
+            if (dX.absoluteValue < 5.5) return false
+            isMoveStarted = true
+        }
+        val current = requireNotNull(yearMonthCurrent)
+        xOffset = startedTrackingXOffset + x
+        if(xOffset > width / 2) {
+            val previous = getPrevious(current)
+            if (previous != null) {
+                yearMonthCurrent = previous
+                onMonthChange(previous.year, previous.month)
+                xOffset -= width
+                startedTrackingXOffset = xOffset - x
+            }
+        } else if(xOffset < width / -2) {
+            val next = getNext(current)
+            if(next != null) {
+                yearMonthCurrent = next
+                onMonthChange(next.year, next.month)
+                xOffset += width
+                startedTrackingXOffset = xOffset - x
+            }
+        }
+        invalidate()
+        return true
+    }
+    private fun onTouchUp(x: Float, y: Float): Boolean {
+        if (xOffset != 0f) {
+            startAnimateXOffset(0f)
+        }
+        if (isMoveStarted) {
+            isMoveStarted = false
+            return true
+        }
+        val current = requireNotNull(yearMonthCurrent)
+        val weeksInMonth = DateUtil.calculateWeeksInMonth(year = current.year, month = current.month, firstDayOfWeek = firstDayOfWeek)
+        val cellHeight = getCellHeight()
+        if (y > weeksInMonth * cellHeight) return true
+        val weekNumber: Int = (y / cellHeight).toInt()
+        val dayOfWeekNumber: Int = (x / cellWidth).toInt()
+        val calendar = getCalendar()
+        calendar[Calendar.YEAR] = current.year
+        calendar[Calendar.MONTH] = current.month
+        calendar[Calendar.DAY_OF_MONTH] = 1
+        calendar[Calendar.WEEK_OF_YEAR] = calendar[Calendar.WEEK_OF_YEAR] + weekNumber
+        calendar[Calendar.DAY_OF_WEEK] = firstDayOfWeek + dayOfWeekNumber
+        val result = calendar.toYearMonthDay()
+        if (current.year == result.year && current.month == result.month) {
+            val payload = payload.getData(year = result.year, month = result.month, dayOfMonth = result.dayOfMonth)
+            if (isPayloadEmptySelectable || payload != null) {
+                if (isSelectedDateChanged) {
+                    dateSelected = result
+                }
+                invalidate()
+                onSelectDate(result.year, result.month, result.dayOfMonth)
+            }
+        }
+        return true
+    }
+    private fun onTouchEventSingle(event: MotionEvent): Boolean {
+        return when (event.action) {
+            MotionEvent.ACTION_DOWN -> onTouchDown(x = event.x)
+            MotionEvent.ACTION_MOVE -> onTouchMove(x = event.x)
+            MotionEvent.ACTION_UP -> onTouchUp(x = event.x, y = event.y)
+            else -> false
+        }
+    }
+    private fun onTouchEventMulti(event: MotionEvent): Boolean {
+        return when(event.actionMasked) {
+            MotionEvent.ACTION_POINTER_DOWN -> onTouchDown(event.x)
+            MotionEvent.ACTION_MOVE -> onTouchMove(event.x)
+            MotionEvent.ACTION_POINTER_UP -> {
+                val x0 = event.getX(0)
+                val x1 = event.getX(1)
+                when(event.actionIndex) {
+                    0 -> onTouchDown(x1)
+                    else -> onTouchDown(x0)
+                }
+            }
+            else -> false
+        }
+    }
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        if (event == null) return false
+        return when(event.pointerCount) {
+            1 -> onTouchEventSingle(event)
+            else -> onTouchEventMulti(event)
         }
     }
 }
