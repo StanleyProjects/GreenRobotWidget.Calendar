@@ -11,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import java.util.Calendar
 import sp.grw.calendar.MonthScrollerView
+import sp.grw.calendar.ScheduleView
 import sp.grw.calendar.WeekScrollerView
 
 class MainActivity : Activity() {
@@ -185,12 +186,90 @@ class MainActivity : Activity() {
 
         return result
     }
+    private fun scheduleView(context: Context): View {
+        val result = ScheduleView(context)
+
+        val timeRange = (8 * 60)..(8 * 60 + 10 * 60)
+        val target = Calendar.getInstance().also {
+            it.timeInMillis = events.minBy { event -> event.startTime }!!.startTime
+        }
+
+        result.setPadding(0, px(dp = 14f).toInt(), 0, px(dp = 14f).toInt())
+        result.setTimeRange(start = timeRange.start, endInclusive = timeRange.endInclusive)
+        result.setTimeTextMargin(px(dp = 16f))
+        result.setTimeTextSize(value = px(dp = 11f))
+        result.setTimeTextColor(value = Color.parseColor("#969696"))
+
+        result.setTimeStepMinutes(value = 30)
+        result.setTimeStepHeight(value = px(dp = 40f))
+
+        result.setTimeMarkColor(value = Color.parseColor("#af1833"))
+        result.setTimeMarkSize(value = px(dp = 1f))
+        result.setTimeMarkAlpha(value = 255 / 100 * 50)
+        result.setTimeMarkRadius(value = px(dp = 5f) / 2)
+        result.setTimeMarkAuto(year = target[Calendar.YEAR], month = target[Calendar.MONTH], dayOfMonth = target[Calendar.DAY_OF_MONTH])
+
+        result.setTimeLineMarginStart(value = px(dp = 52f))
+        result.setTimeLineMarginEnd(value = px(dp = 8f))
+        result.setTimeLineCount(value = 1)
+        result.setTimeLineColor(value = Color.parseColor("#cccccc"))
+        result.setTimeLineSize(value = px(dp = 0.5f))
+
+        result.setGroupMargin(value = px(dp = 3f))
+        result.setGroupMarginStart(value = px(dp = 54f))
+        result.setGroupMarginEnd(value = px(dp = 16f))
+        result.setGroupPaddingTop(value = px(dp = 3.5f))
+        result.setGroupPaddingStart(value = px(dp = 6f))
+        result.setGroupPaddingEnd(value = px(dp = 4f))
+        result.setGroupBackgroundColor(value = Color.parseColor("#accde6"))
+        result.setGroupBackgroundAlpha(isActive = true, value = 255 / 100 * 35)
+        result.setGroupBackgroundAlpha(isActive = false, value = 255 / 100 * 25)
+        result.setGroupForegroundColor(value = Color.parseColor("#36709c"))
+        result.setGroupForegroundAlpha(isActive = true, value = 255 / 100 * 100)
+        result.setGroupForegroundAlpha(isActive = false, value = 255 / 100 * 60)
+        result.setGroupRadius(value = px(dp = 2f))
+        result.setGroupLineCountMax(value = 3)
+        result.setGroupTextSize(value = px(dp = 11f))
+        result.setGroupTextLineSpace(value = px(dp = 6f))
+
+        val calendar = Calendar.getInstance()
+        val filtered = events.filter {
+            calendar.timeInMillis = it.startTime
+            val sy = calendar[Calendar.YEAR]
+            val sm = calendar[Calendar.MONTH]
+            val sd = calendar[Calendar.DAY_OF_MONTH]
+            val sMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
+            calendar.timeInMillis = it.endTime
+            val ey = calendar[Calendar.YEAR]
+            val em = calendar[Calendar.MONTH]
+            val ed = calendar[Calendar.DAY_OF_MONTH]
+            val eMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
+            sy == target[Calendar.YEAR] && ey == target[Calendar.YEAR] &&
+            sm == target[Calendar.MONTH] && em == target[Calendar.MONTH] &&
+            sd == target[Calendar.DAY_OF_MONTH] && ed == target[Calendar.DAY_OF_MONTH] &&
+            sMinutes >= timeRange.start &&
+            eMinutes <= timeRange.endInclusive
+        }
+        val payload: List<Triple<Int, Int, String>> = filtered.map {
+            calendar.timeInMillis = it.startTime
+            val sh = calendar[Calendar.HOUR_OF_DAY]
+            val sm = calendar[Calendar.MINUTE]
+            calendar.timeInMillis = it.endTime
+            val eh = calendar[Calendar.HOUR_OF_DAY]
+            val em = calendar[Calendar.MINUTE]
+            Triple(sh * 60 + sm, eh * 60 + em, it.type)
+        }
+        result.setPayload(list = payload)
+
+        return result
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
 //        val view = monthScrollerView(context)
-        val view = weekScrollerView(context)
+//        val view = weekScrollerView(context)
+        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
             view.background = ColorDrawable(Color.WHITE)
