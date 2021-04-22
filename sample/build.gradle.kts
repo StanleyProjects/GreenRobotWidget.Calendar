@@ -15,7 +15,7 @@ android {
     defaultConfig {
         minSdkVersion(16)
         targetSdkVersion(30)
-        applicationId = "sp.grw.calendar"
+        applicationId = "sp.service.sample"
         versionCode = 1
         versionName = "0.0.1"
         vectorDrawables.useSupportLibrary = true
@@ -37,6 +37,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":lib"))
     implementation(
         group = "org.jetbrains.kotlin",
         name = "kotlin-stdlib",
