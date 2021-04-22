@@ -1,17 +1,21 @@
 package sp.grw.calendar
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.view.MotionEvent
 import android.view.View
 import java.util.Calendar
+import kotlin.math.absoluteValue
 import sp.grw.calendar.entity.Payload
 import sp.grw.calendar.entity.YearMonthDay
 import sp.grw.calendar.entity.YearWeek
 import sp.grw.calendar.util.AndroidUtil.getTextHeight
 import sp.grw.calendar.util.DateUtil
+import sp.grw.calendar.util.DateUtil.toYearMonthDay
 import sp.grw.calendar.util.DateUtil.toYearWeek
 
 class WeekScrollerView(context: Context) : View(context) {
@@ -342,9 +346,32 @@ class WeekScrollerView(context: Context) : View(context) {
         invalidate()
     }
 
+    var onWeekChange: (year: Int, weekOfYear: Int) -> Unit = { _, _ -> } // todo
+
+    private var isSelectedDateChanged: Boolean = false
+    fun toChangeSelectedDate(value: Boolean) {
+        isSelectedDateChanged = value
+        invalidate()
+    }
+    var onSelectDate: (year: Int, month: Int, dayOfMonth: Int) -> Unit = { _, _, _ -> } // todo
+
     private var dateSelected: YearMonthDay? = null
     private var yearWeekCurrent: YearWeek? = null
     private var xOffset = 0f
+    private var startedTrackingXOffset = 0f
+    private var animatorX: ObjectAnimator? = null
+
+    private fun startAnimateXOffset(to: Float) {
+        animatorX?.cancel()
+        animatorX = ObjectAnimator.ofFloat(this, "xOffset", xOffset, to)
+            .setDuration(250)
+            .also { it.start() }
+    }
+    // todo proguard
+    private fun setXOffset(value: Float) {
+        xOffset = value
+        invalidate()
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         var height = dayHeight
@@ -506,6 +533,97 @@ class WeekScrollerView(context: Context) : View(context) {
                 calendar[Calendar.WEEK_OF_YEAR] = next.weekOfYear
                 onDrawWeek(canvas, calendar, xOffset = xOffset + width)
             }
+        }
+    }
+
+    private fun onTouchDown(x: Float): Boolean {
+        startedTrackingXOffset = xOffset - x
+        return true
+    }
+    private fun onTouchMove(x: Float): Boolean {
+        val dX = xOffset - startedTrackingXOffset - x
+        if (!isMoveStarted) {
+            if (dX.absoluteValue < 5.5) return false
+            isMoveStarted = true
+        }
+        xOffset = startedTrackingXOffset + x
+        val current = requireNotNull(yearWeekCurrent)
+        if (xOffset > width / 2) {
+            val previous = getPrevious(current)
+            if (previous != null) {
+                yearWeekCurrent = previous
+                onWeekChange(previous.year, previous.weekOfYear)
+                xOffset -= width
+                startedTrackingXOffset = xOffset - x
+            }
+        } else if (xOffset < width / -2) {
+            val next = getNext(current)
+            if(next != null) {
+                yearWeekCurrent = next
+                onWeekChange(next.year, next.weekOfYear)
+                xOffset += width
+                startedTrackingXOffset = xOffset - x
+            }
+        }
+        invalidate()
+        return true
+    }
+    private var isMoveStarted = false
+    private fun onTouchUp(x: Float, y: Float): Boolean {
+        if (xOffset != 0f) {
+            startAnimateXOffset(0f)
+        }
+        if (isMoveStarted) {
+            isMoveStarted = false
+            return true
+        }
+        val yTop = paddingTop.toFloat() + if (isDayNameDrawn) dayNameHeight + dayNameMargin else 0f
+        if (y in yTop..(yTop + dayHeight)) {
+            val dayWidth = width.toFloat() / DateUtil.DAYS_IN_WEEK
+            val dayOfWeekNumber: Int = (x / dayWidth).toInt()
+            val current = requireNotNull(yearWeekCurrent)
+            val calendar = Calendar.getInstance()
+            calendar.firstDayOfWeek = firstDayOfWeek
+            calendar[Calendar.YEAR] = current.year
+            calendar[Calendar.WEEK_OF_YEAR] = current.weekOfYear
+            calendar[Calendar.DAY_OF_WEEK] = firstDayOfWeek + dayOfWeekNumber
+            val result = calendar.toYearMonthDay()
+            if (isSelectedDateChanged) {
+                dateSelected = result
+            }
+            invalidate()
+            onSelectDate(result.year, result.month, result.dayOfMonth)
+        }
+        return true
+    }
+    private fun onTouchEventSingle(event: MotionEvent): Boolean {
+        return when (event.action) {
+            MotionEvent.ACTION_DOWN -> onTouchDown(x = event.x)
+            MotionEvent.ACTION_MOVE -> onTouchMove(x = event.x)
+            MotionEvent.ACTION_UP -> onTouchUp(x = event.x, y = event.y)
+            else -> false
+        }
+    }
+    private fun onTouchEventMulti(event: MotionEvent): Boolean {
+        return when(event.actionMasked) {
+            MotionEvent.ACTION_POINTER_DOWN -> onTouchDown(event.x)
+            MotionEvent.ACTION_MOVE -> onTouchMove(event.x)
+            MotionEvent.ACTION_POINTER_UP -> {
+                val x0 = event.getX(0)
+                val x1 = event.getX(1)
+                when(event.actionIndex) {
+                    0 -> onTouchDown(x1)
+                    else -> onTouchDown(x0)
+                }
+            }
+            else -> false
+        }
+    }
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        if (event == null) return false
+        return when(event.pointerCount) {
+            1 -> onTouchEventSingle(event)
+            else -> onTouchEventMulti(event)
         }
     }
 }

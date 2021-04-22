@@ -173,6 +173,16 @@ class MainActivity : Activity() {
         }
         result.setPayload(value = payload)
 
+        result.onWeekChange = { year, weekOfYear ->
+            val value = String.format("%04d/%02d", year, weekOfYear)
+            showToast(value)
+        }
+        result.toChangeSelectedDate(value = true)
+        result.onSelectDate = { year, month, dayOfMonth ->
+            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
+            showToast(value)
+        }
+
         return result
     }
 
