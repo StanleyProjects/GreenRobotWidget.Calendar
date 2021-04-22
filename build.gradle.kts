@@ -11,5 +11,5 @@ buildscript {
 }
 
 task<Delete>("clean") {
-    delete = setOf(rootProject.buildDir, File(rootDir, "buildSrc/build"))
+    delete = setOf(rootProject.buildDir)
 }
