@@ -1,5 +1,7 @@
 package sp.grw.calendar.entity
 
+import java.util.Calendar
+
 internal class YearMonth(val year: Int, val month: Int) {
     override fun toString(): String {
         return "{$year/$month}"
@@ -9,6 +11,12 @@ internal class YearMonth(val year: Int, val month: Int) {
 internal class YearMonthDay(val year: Int, val month: Int, val dayOfMonth: Int) {
     override fun toString(): String {
         return "{$year/$month/$dayOfMonth}"
+    }
+}
+
+internal class YearWeek(val year: Int, val weekOfYear: Int) {
+    override fun toString(): String {
+        return "{$year/$weekOfYear}"
     }
 }
 
@@ -54,9 +62,44 @@ internal class Payload(
         return value[year]?.keys.orEmpty()
     }
 
+    fun getWeeks(year: Int, firstDayOfWeek: Int): Set<Int> {
+        val months = value[year] ?: return emptySet()
+        val calendar = Calendar.getInstance()
+        calendar[Calendar.YEAR] = year
+        val (minMonth, minDays) = months.minBy { (k, _) -> k } ?: return emptySet()
+        val (minDayOfMonth, _) = minDays.minBy { (k, _) -> k } ?: return emptySet()
+        calendar.firstDayOfWeek = firstDayOfWeek
+        calendar[Calendar.MONTH] = minMonth
+        calendar[Calendar.DAY_OF_MONTH] = minDayOfMonth
+        val minWeekOfYear = calendar[Calendar.WEEK_OF_YEAR]
+        val (maxMonth, maxDays) = months.maxBy { (k, _) -> k } ?: return emptySet()
+        val (maxDayOfMonth, _) = maxDays.maxBy { (k, _) -> k } ?: return emptySet()
+        calendar.firstDayOfWeek = firstDayOfWeek
+        calendar[Calendar.MONTH] = maxMonth
+        calendar[Calendar.DAY_OF_MONTH] = maxDayOfMonth
+        val maxWeekOfYear = calendar[Calendar.WEEK_OF_YEAR]
+        return (minWeekOfYear..maxWeekOfYear).toSet()
+    }
+
     fun forEachMonths(block: (year: Int, months: Set<Int>) -> Unit) {
         value.forEach { (year, months) ->
             block(year, months.map { (k, _) -> k }.toSet())
+        }
+    }
+
+    fun forEachWeeks(firstDayOfWeek: Int, block: (year: Int, weeks: Set<Int>) -> Unit) {
+        val calendar = Calendar.getInstance()
+        calendar.firstDayOfWeek = firstDayOfWeek
+        value.forEach { (year, months) ->
+            calendar[Calendar.YEAR] = year
+            val weeks = months.map { (month, days) ->
+                calendar[Calendar.MONTH] = month
+                days.map { (dayOfMonth, _) ->
+                    calendar[Calendar.DAY_OF_MONTH] = dayOfMonth
+                    calendar[Calendar.WEEK_OF_YEAR]
+                }
+            }.flatten().toSet()
+            block(year, weeks)
         }
     }
 }

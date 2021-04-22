@@ -142,20 +142,6 @@ class MonthScrollerView(context: Context) : View(context) {
             val month = months[year]?.firstOrNull() ?: return null
             return YearMonth(year = year, month = month)
         }
-
-        private fun isSelected(
-            year: Int,
-            month: Int,
-            dayOfMonth: Int,
-            dateSelected: YearMonthDay?,
-            isAutoSelectToday: Boolean,
-            isToday: Boolean
-        ): Boolean {
-            return if (dateSelected == null) isAutoSelectToday && isToday
-            else dateSelected.year == year &&
-                dateSelected.month == month &&
-                dateSelected.dayOfMonth == dayOfMonth
-        }
     }
 
     private var dayHeight = 0f
@@ -229,7 +215,7 @@ class MonthScrollerView(context: Context) : View(context) {
         invalidate()
     }
     private var isPayloadDrawn: Boolean = false
-    fun toDrawnPayload(value: Boolean) {
+    fun toDrawPayload(value: Boolean) {
         isPayloadDrawn = value
         invalidate()
     }
@@ -555,7 +541,7 @@ class MonthScrollerView(context: Context) : View(context) {
                 if (year != yearTarget || month != monthTarget) continue // todo test
                 val dayOfMonth = calendar[Calendar.DAY_OF_MONTH]
                 val isToday = today.year == year && today.month == month && today.dayOfMonth == dayOfMonth
-                val isSelected = isSelected(
+                val isSelected = DateUtil.isSelected(
                     year = year,
                     month = month,
                     dayOfMonth = dayOfMonth,

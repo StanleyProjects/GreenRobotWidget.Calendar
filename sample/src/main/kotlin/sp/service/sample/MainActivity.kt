@@ -11,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import java.util.Calendar
 import sp.grw.calendar.MonthScrollerView
+import sp.grw.calendar.WeekScrollerView
 
 class MainActivity : Activity() {
 	private class Event(val startTime: Long, val endTime: Long, val type: String)
@@ -68,7 +69,7 @@ class MainActivity : Activity() {
         result.setDaySelectedColorRegular(value = Color.parseColor("#7092ac"))
         result.setDaySelectedColorToday(value = Color.parseColor("#af1833"))
 
-        result.toDrawnPayload(value = true)
+        result.toDrawPayload(value = true)
         result.setPayloadHeight(value = px(dp = 20f))
         result.setPayloadMargin(value = px(dp = 5f))
         result.setPayloadTextSize(value = px(dp = 12f))
@@ -112,11 +113,74 @@ class MainActivity : Activity() {
 
         return result
     }
+    private fun weekScrollerView(context: Context): View {
+        val result = WeekScrollerView(context)
+
+        result.setPadding(0, px(dp = 9f).toInt(), 0, px(dp = 1f).toInt())
+        result.setFirstDayOfWeek(value = Calendar.MONDAY)
+        result.toSkipEmptyWeeks(value = false)
+        result.toSkipEmptyTodayWeek(value = false)
+        result.toSelectTodayAuto(value = true)
+
+        result.toDrawDayName(value = true)
+        result.setDayHeight(value = px(dp = 29f))
+        result.setDaySelectedColorRegular(value = Color.parseColor("#7092ac"))
+        result.setDaySelectedColorToday(value = Color.parseColor("#af1833"))
+        result.setDayTextSize(value = px(dp = 15f))
+        result.setDayTextColorRegular(value = Color.parseColor("#000000"))
+        result.setDayTextColorSelected(value = Color.parseColor("#ffffff"))
+        result.setDayTextColorToday(value = Color.parseColor("#e91e42"))
+        result.setDayTypefaceRegular(value = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)!!)
+        result.setDayTypefaceWeekend(value = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)!!)
+        result.setDayNameHeight(value = px(dp = 10f))
+        result.setDayNameMargin(value = px(dp = 5f))
+        result.setDayNameTextSize(value = px(dp = 10f))
+        result.setDayNameTextColor(value = Color.parseColor("#000000"))
+        result.setDayOfWeekToString { dayOfWeek ->
+            when (dayOfWeek) {
+                Calendar.MONDAY -> "ПН"
+                Calendar.TUESDAY -> "ВТ"
+                Calendar.WEDNESDAY -> "СР"
+                Calendar.THURSDAY -> "ЧТ"
+                Calendar.FRIDAY -> "ПТ"
+                Calendar.SATURDAY -> "СБ"
+                Calendar.SUNDAY -> "ВС"
+                else -> error("Day of week \"$dayOfWeek\" not supported!")
+            }
+        }
+
+        result.toDrawPayload(value = true)
+        result.setPayloadHeight(px(dp = 3f))
+        result.setPayloadMargin(px(dp = 2f))
+        result.setPayloadColor(value = Color.parseColor("#af1833"))
+        val calendar = Calendar.getInstance()
+        val payload: Map<Int, Map<Int, Map<Int, String>>> = events.map {
+            calendar.timeInMillis = it.startTime
+            Triple(calendar[Calendar.YEAR], calendar[Calendar.MONTH], calendar[Calendar.DAY_OF_MONTH]) to it.type
+        }.groupBy { (triple, _) ->
+            val (year, _, _) = triple
+            year
+        }.mapValues { (_, months) ->
+            months.groupBy { (triple, _) ->
+                val (_, month, _) = triple
+                month
+            }.mapValues { (_, days) ->
+                days.map { (triple, type) ->
+                    val (_, _, dayOfMonth) = triple
+                    dayOfMonth to type
+                }.toMap()
+            }
+        }
+        result.setPayload(value = payload)
+
+        return result
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-        val view = monthScrollerView(context)
+//        val view = monthScrollerView(context)
+        val view = weekScrollerView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
             view.background = ColorDrawable(Color.WHITE)
