@@ -5,8 +5,10 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.view.MotionEvent
 import android.view.View
 import java.util.Calendar
+import kotlin.math.absoluteValue
 import sp.grw.calendar.entity.YearMonthDay
 import sp.grw.calendar.util.AndroidUtil.appendArc
 import sp.grw.calendar.util.AndroidUtil.drawRoundRect
@@ -343,6 +345,8 @@ class ScheduleView(context: Context) : View(context) {
         groupMatrix = toMatrix(events, ladderSize = ladderSize)
     }
 
+    var onGroupClick: (start: Int, end: Int) -> Unit = { _, _ -> } // todo default
+
     private var yearMonthDayCurrent: YearMonthDay? = null
     private var yOffset = 0f
     private var startedTrackingYOffset = 0f
@@ -507,6 +511,97 @@ class ScheduleView(context: Context) : View(context) {
             timeMarkPaint.alpha = 255
             canvas.drawCircle(timeLineMarginStart, y, timeMarkRadius, timeMarkPaint)
             timeMarkPaint.alpha = alpha
+        }
+    }
+
+    private fun onTouchDown(y: Float): Boolean {
+        startedTrackingYOffset = yOffset - y
+        return true
+    }
+    private var isMoveStarted = false
+    private fun onTouchMove(heightChildren: Float, y: Float): Boolean {
+        if (!isMoveStarted) {
+            if ((yOffset - startedTrackingYOffset - y).absoluteValue < 5.5) return false
+            isMoveStarted = true
+        }
+        if (heightChildren < height) return false
+        yOffset = startedTrackingYOffset + y
+        invalidate()
+        return true
+    }
+    private fun onTouchUp(heightChildren: Float, x: Float, y: Float): Boolean {
+        if (heightChildren > height) {
+            if (yOffset > 0f) {
+                startAnimateYOffset(0f)
+            } else if (height - heightChildren > yOffset) {
+                startAnimateYOffset(height - heightChildren)
+            }
+        }
+        if (isMoveStarted) {
+            isMoveStarted = false
+            return true
+        }
+        if (x > groupMarginStart && x < width - groupMarginEnd) {
+            val ladderSize = ladderSize
+            if (ladderSize > 0) {
+                val groupWidthFull: Float = width - groupMarginStart - groupMarginEnd
+                val groupWidth: Float = (groupWidthFull - groupMargin * (ladderSize - 1)) / ladderSize
+                for (row in 0 until ladderSize) {
+                    val groupX: Float = groupMarginStart + groupWidth * row + groupMargin * row
+                    if (x in groupX..(groupX + groupWidth)) {
+                        val dY = timeStepHeight / timeStepMinutes
+                        val startingPointY = yOffset + paddingTop
+                        for (group in groupMatrix[row]) {
+                            if (group.isEmpty()) continue
+                            val start = group.minBy { it.start }!!.start
+                            val yStart = startingPointY + start * dY - timeRange.start * dY
+                            val end = group.maxBy { it.end }!!.end
+                            val yEnd = startingPointY + end * dY - timeRange.start * dY
+                            if (y in yStart..yEnd) {
+                                onGroupClick(start, end)
+                                break
+                            }
+                        }
+                        break
+                    }
+                }
+            }
+        }
+        return true
+    }
+    private fun onTouchEventSingle(heightChildren: Float, event: MotionEvent): Boolean {
+        return when (event.action) {
+            MotionEvent.ACTION_DOWN -> onTouchDown(y = event.y)
+            MotionEvent.ACTION_MOVE -> onTouchMove(heightChildren = heightChildren, y = event.y)
+            MotionEvent.ACTION_UP -> onTouchUp(heightChildren = heightChildren, x = event.x, y = event.y)
+            else -> false
+        }
+    }
+    private fun onTouchEventMulti(heightChildren: Float, event: MotionEvent): Boolean {
+        return when(event.actionMasked) {
+            MotionEvent.ACTION_POINTER_DOWN -> onTouchDown(y = event.y)
+            MotionEvent.ACTION_MOVE -> onTouchMove(heightChildren = heightChildren, y = event.y)
+            MotionEvent.ACTION_POINTER_UP -> {
+                val x0 = event.getX(0)
+                val x1 = event.getX(1)
+                when(event.actionIndex) {
+                    0 -> onTouchDown(x1)
+                    else -> onTouchDown(x0)
+                }
+            }
+            else -> false
+        }
+    }
+    private fun getHeightChildren(): Float {
+        val dY = timeStepHeight / timeStepMinutes
+        return timeRange.endInclusive * dY - timeRange.start * dY + paddingTop + paddingBottom
+    }
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        if (event == null) return false
+        val heightChildren = getHeightChildren()
+        return when (event.pointerCount) {
+            1 -> onTouchEventSingle(heightChildren = heightChildren, event = event)
+            else -> onTouchEventMulti(heightChildren = heightChildren, event = event)
         }
     }
 }

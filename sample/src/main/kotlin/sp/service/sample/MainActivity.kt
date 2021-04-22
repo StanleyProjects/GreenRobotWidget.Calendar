@@ -233,7 +233,7 @@ class MainActivity : Activity() {
         result.setGroupTextLineSpace(value = px(dp = 6f))
 
         val calendar = Calendar.getInstance()
-        val filtered = events.filter {
+        val payload: List<Triple<Int, Int, String>> = events.filter {
             calendar.timeInMillis = it.startTime
             val sy = calendar[Calendar.YEAR]
             val sm = calendar[Calendar.MONTH]
@@ -249,8 +249,7 @@ class MainActivity : Activity() {
             sd == target[Calendar.DAY_OF_MONTH] && ed == target[Calendar.DAY_OF_MONTH] &&
             sMinutes >= timeRange.start &&
             eMinutes <= timeRange.endInclusive
-        }
-        val payload: List<Triple<Int, Int, String>> = filtered.map {
+        }.map {
             calendar.timeInMillis = it.startTime
             val sh = calendar[Calendar.HOUR_OF_DAY]
             val sm = calendar[Calendar.MINUTE]
@@ -260,6 +259,31 @@ class MainActivity : Activity() {
             Triple(sh * 60 + sm, eh * 60 + em, it.type)
         }
         result.setPayload(list = payload)
+
+        result.onGroupClick = { start, end ->
+            val event = events.filter {
+                calendar.timeInMillis = it.startTime
+                val sy = calendar[Calendar.YEAR]
+                val sm = calendar[Calendar.MONTH]
+                val sd = calendar[Calendar.DAY_OF_MONTH]
+                val sMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
+                calendar.timeInMillis = it.endTime
+                val ey = calendar[Calendar.YEAR]
+                val em = calendar[Calendar.MONTH]
+                val ed = calendar[Calendar.DAY_OF_MONTH]
+                val eMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
+                sy == target[Calendar.YEAR] && ey == target[Calendar.YEAR] &&
+                sm == target[Calendar.MONTH] && em == target[Calendar.MONTH] &&
+                sd == target[Calendar.DAY_OF_MONTH] && ed == target[Calendar.DAY_OF_MONTH] &&
+                start <= sMinutes &&
+                end >= eMinutes
+            }.minBy { it.startTime }
+            if (event == null) {
+                Toast.makeText(context, "null", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, event.type, Toast.LENGTH_SHORT).show()
+            }
+        }
 
         return result
     }
