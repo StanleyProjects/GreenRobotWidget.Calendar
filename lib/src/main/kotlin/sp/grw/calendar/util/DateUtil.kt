@@ -37,6 +37,10 @@ internal object DateUtil {
         return max - min
     }
 
+    fun getDayOfWeekAfter(dayOfWeek: Int, after: Int): Int {
+        return (dayOfWeek + after) % DAYS_IN_WEEK
+    }
+
     fun isWeekendDay(firstDayOfWeek: Int, dayOfWeek: Int): Boolean {
         check(dayOfWeek in Calendar.SUNDAY..Calendar.SATURDAY) {
             "Day of week \"$dayOfWeek\" not supported!"
@@ -50,9 +54,10 @@ internal object DateUtil {
     fun isToday(
         year: Int,
         month: Int,
-        dayOfMonth: Int
+        dayOfMonth: Int,
+        timeZone: TimeZone
     ): Boolean {
-        val calendar = Calendar.getInstance()
+        val calendar = calendar(firstDayOfWeek = Calendar.MONDAY, timeZone = timeZone)
         return calendar[Calendar.YEAR] == year &&
             calendar[Calendar.MONTH] == month &&
             calendar[Calendar.DAY_OF_MONTH] == dayOfMonth
@@ -64,7 +69,7 @@ internal object DateUtil {
         dayOfMonth: Int,
         dateSelected: YearMonthDay?,
         isAutoSelectToday: Boolean,
-        isToday: Boolean = isToday(year = year, month = month, dayOfMonth = dayOfMonth)
+        isToday: Boolean
     ): Boolean {
         return if (dateSelected == null) isAutoSelectToday && isToday
         else dateSelected.year == year &&

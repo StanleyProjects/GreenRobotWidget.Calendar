@@ -27,7 +27,8 @@ class MainActivity : Activity() {
         private val timeZoneSource = TimeZone.getTimeZone("UTC")
 //        private val timeZoneTarget = TimeZone.getDefault()
         private val timeZoneTarget = timeZoneSource
-        private val firstDayOfWeek = Calendar.MONDAY
+        private const val firstDayOfWeek = Calendar.MONDAY
+//        private const val firstDayOfWeek = Calendar.TUESDAY
     }
 /*
 	private val events = mapOf(
@@ -123,12 +124,13 @@ class MainActivity : Activity() {
         val timeZone = TimeZone.getDefault()
 
         result.setTimeZone(value = timeZoneTarget)
-        result.setFirstDayOfWeek(value = Calendar.MONDAY)
+        result.setFirstDayOfWeek(value = firstDayOfWeek)
         result.toSkipEmptyMonths(value = false)
         result.toSkipEmptyTodayMonth(value = false)
         result.toSelectTodayAuto(value = true)
         result.setActiveType(value = ActiveType.FUTURE)
 //        result.setActiveType(value = ActiveType.PAYLOAD)
+        result.setMonthOffsetBefore(value = 1)
 
         result.setDayHeight(value = px(dp = 29f))
         result.setDayPaddingTop(value = px(dp = 6f))
@@ -243,6 +245,8 @@ class MainActivity : Activity() {
         result.toSkipEmptyTodayWeek(value = false)
         result.toSelectTodayAuto(value = true)
         result.setActiveType(value = ActiveType.ALL)
+        result.setMonthOffsetBefore(value = 2)
+        result.setMonthOffsetAfter(value = 1)
 
         result.toDrawDayName(value = true)
         result.setDayHeight(value = px(dp = 29f))
@@ -470,8 +474,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-//        val view = monthScrollerView(context)
-        val view = weekScrollerView(context)
+        val view = monthScrollerView(context)
+//        val view = weekScrollerView(context)
 //        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)

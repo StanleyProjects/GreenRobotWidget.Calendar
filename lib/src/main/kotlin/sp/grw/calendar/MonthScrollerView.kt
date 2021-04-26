@@ -132,10 +132,12 @@ class MonthScrollerView(context: Context) : View(context) {
             payload: Payload,
             firstDayOfWeek: Int,
             timeZone: TimeZone,
+            monthOffsetBefore: Int,
             isEmptyMonthsSkipped: Boolean,
             isEmptyTodayMonthSkipped: Boolean
         ): Map<Int, Set<Int>> {
-            return if (isEmptyMonthsSkipped) {
+            if (monthOffsetBefore < 0) error("Negative offset!")
+            val result = if (isEmptyMonthsSkipped) {
                 onlyMonthsWithDays(
                     payload = payload,
                     firstDayOfWeek = firstDayOfWeek,
@@ -150,12 +152,34 @@ class MonthScrollerView(context: Context) : View(context) {
                     isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
                 )
             }
+            if (result.isEmpty()) return emptyMap() // todo
+            if (monthOffsetBefore == 0) return result
+            val minYear = result.minBy { (year, _) -> year }!!.key
+            val minMonth = result[minYear]!!.minBy { it }!!
+            val offset = (1..monthOffsetBefore).map {
+                val calendar = DateUtil.calendar(
+                    firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone
+                )
+                calendar[Calendar.YEAR] = minYear
+                calendar[Calendar.MONTH] = minMonth - it
+                calendar[Calendar.YEAR] to calendar[Calendar.MONTH]
+            }
+            val group = offset.groupBy { (year, _) -> year }.mapValues { (_, list) ->
+                list.map { (_, month) -> month }.sorted().toSet()
+            }
+            return (group.asSequence() + result.asSequence())
+                .groupBy { (year, _) -> year }
+                .mapValues { (_, list) ->
+                    list.map { (_, months) -> months }.flatten().sorted().toSet()
+                }
         }
 
         private fun getYearMonthDefault(
             payload: Payload,
             firstDayOfWeek: Int,
             timeZone: TimeZone,
+            monthOffsetBefore: Int,
             isEmptyMonthsSkipped: Boolean,
             isEmptyTodayMonthSkipped: Boolean
         ): YearMonth? {
@@ -168,6 +192,7 @@ class MonthScrollerView(context: Context) : View(context) {
                 payload = payload,
                 firstDayOfWeek = firstDayOfWeek,
                 timeZone = timeZone,
+                monthOffsetBefore = monthOffsetBefore,
                 isEmptyMonthsSkipped = isEmptyMonthsSkipped,
                 isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
             )
@@ -244,16 +269,21 @@ class MonthScrollerView(context: Context) : View(context) {
         invalidate()
     }
 
-    private var payload: Payload = Payload(emptyMap())
-    fun setPayload(value: Map<Int, Map<Int, Map<Int, String>>>) {
-        payload = Payload(value)
-        yearMonthCurrent = getYearMonthDefault(
+    private fun getYearMonthDefault(): YearMonth? {
+        return getYearMonthDefault(
             payload = payload,
             firstDayOfWeek = firstDayOfWeek,
             timeZone = timeZone,
+            monthOffsetBefore = monthOffsetBefore,
             isEmptyMonthsSkipped = isEmptyMonthsSkipped,
             isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
         )
+    }
+
+    private var payload: Payload = Payload(emptyMap())
+    fun setPayload(value: Map<Int, Map<Int, Map<Int, String>>>) {
+        payload = Payload(value)
+        yearMonthCurrent = getYearMonthDefault()
         invalidate()
     }
     private var isPayloadDrawn: Boolean = false
@@ -303,13 +333,7 @@ class MonthScrollerView(context: Context) : View(context) {
             }
         }
         if (!containsCurrent) {
-	        yearMonthCurrent = getYearMonthDefault(
-	            payload = payload,
-                firstDayOfWeek = firstDayOfWeek,
-                timeZone = timeZone,
-	            isEmptyMonthsSkipped = value,
-	            isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
-	        )
+	        yearMonthCurrent = getYearMonthDefault()
         }
         invalidate()
     }
@@ -323,13 +347,7 @@ class MonthScrollerView(context: Context) : View(context) {
             }
         }
         if (!containsCurrent) {
-	        yearMonthCurrent = getYearMonthDefault(
-	            payload = payload,
-                firstDayOfWeek = firstDayOfWeek,
-                timeZone = timeZone,
-	            isEmptyMonthsSkipped = isEmptyMonthsSkipped,
-	            isEmptyTodayMonthSkipped = value
-	        )
+	        yearMonthCurrent = getYearMonthDefault()
         }
         invalidate()
     }
@@ -383,6 +401,12 @@ class MonthScrollerView(context: Context) : View(context) {
     }
     var onSelectDate: (year: Int, month: Int, dayOfMonth: Int) -> Unit = { _, _, _ -> } // todo
 
+    private var monthOffsetBefore = 0
+    fun setMonthOffsetBefore(value: Int) {
+        if (value < 0) error("Negative offset!")
+        monthOffsetBefore = value
+        invalidate()
+    }
     private var dateSelected: YearMonthDay? = null
     fun selectDate(year: Int, month: Int, dayOfMonth: Int, toMove: Boolean) {
         val old = dateSelected
@@ -481,6 +505,7 @@ class MonthScrollerView(context: Context) : View(context) {
             payload = payload,
             firstDayOfWeek = firstDayOfWeek,
             timeZone = timeZone,
+            monthOffsetBefore = monthOffsetBefore,
             isEmptyMonthsSkipped = isEmptyMonthsSkipped,
             isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
         )
@@ -488,7 +513,7 @@ class MonthScrollerView(context: Context) : View(context) {
 
     private fun getPrevious(current: YearMonth): YearMonth? {
         val yearsToMonths = getMonths()
-        val years = yearsToMonths.keys.toList()
+        val years = yearsToMonths.keys.toList().sorted()
         for (y in years.indices) {
             val year = years[y]
             val months = yearsToMonths[year]?.toList() ?: continue
@@ -510,7 +535,7 @@ class MonthScrollerView(context: Context) : View(context) {
     }
     private fun getNext(current: YearMonth): YearMonth? {
         val yearsToMonths = getMonths()
-        val years = yearsToMonths.keys.toList()
+        val years = yearsToMonths.keys.toList().sorted()
         for (y in years.indices) {
             val year = years[y]
             val months = yearsToMonths[year]?.toList() ?: continue
@@ -800,7 +825,13 @@ class MonthScrollerView(context: Context) : View(context) {
                     month = result.month,
                     dayOfMonth = result.dayOfMonth,
                     dateSelected = dateSelected,
-                    isAutoSelectToday = isAutoSelectToday
+                    isAutoSelectToday = isAutoSelectToday,
+                    isToday = DateUtil.isToday(
+                        year = result.year,
+                        month = result.month,
+                        dayOfMonth = result.dayOfMonth,
+                        timeZone = timeZone
+                    )
                 )
                 if (!isSelected) {
                     if (isSelectedDateChanged) {
