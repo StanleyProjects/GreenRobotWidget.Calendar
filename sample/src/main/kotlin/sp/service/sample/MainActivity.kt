@@ -18,6 +18,7 @@ import org.json.JSONArray
 import sp.grw.calendar.MonthScrollerView
 import sp.grw.calendar.ScheduleView
 import sp.grw.calendar.WeekScrollerView
+import sp.grw.calendar.entity.ActiveType
 
 class MainActivity : Activity() {
     private class Event(val startTime: Long, val endTime: Long, val type: String)
@@ -126,6 +127,8 @@ class MainActivity : Activity() {
         result.toSkipEmptyMonths(value = false)
         result.toSkipEmptyTodayMonth(value = false)
         result.toSelectTodayAuto(value = true)
+        result.setActiveType(value = ActiveType.FUTURE)
+//        result.setActiveType(value = ActiveType.PAYLOAD)
 
         result.setDayHeight(value = px(dp = 29f))
         result.setDayPaddingTop(value = px(dp = 6f))
@@ -134,6 +137,7 @@ class MainActivity : Activity() {
         result.setDayTypefaceRegular(value = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)!!)
         result.setDayTypefaceWeekend(value = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)!!)
         result.setDayTextColorRegular(value = Color.parseColor("#000000"))
+        result.setDayTextColorNotActive(value = Color.parseColor("#b2b2b2"))
         result.setDayTextColorSelected(value = Color.parseColor("#ffffff"))
         result.setDayTextColorToday(value = Color.parseColor("#e91e42"))
         result.setDaySelectedColorRegular(value = Color.parseColor("#7092ac"))
@@ -205,6 +209,7 @@ class MainActivity : Activity() {
         result.toSkipEmptyWeeks(value = false)
         result.toSkipEmptyTodayWeek(value = false)
         result.toSelectTodayAuto(value = true)
+        result.setActiveType(value = ActiveType.ALL)
 
         result.toDrawDayName(value = true)
         result.setDayHeight(value = px(dp = 29f))
@@ -212,6 +217,7 @@ class MainActivity : Activity() {
         result.setDaySelectedColorToday(value = Color.parseColor("#af1833"))
         result.setDayTextSize(value = px(dp = 15f))
         result.setDayTextColorRegular(value = Color.parseColor("#000000"))
+        result.setDayTextColorNotActive(value = Color.parseColor("#b2b2b2"))
         result.setDayTextColorSelected(value = Color.parseColor("#ffffff"))
         result.setDayTextColorToday(value = Color.parseColor("#e91e42"))
         result.setDayTypefaceRegular(value = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)!!)

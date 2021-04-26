@@ -2,6 +2,7 @@ package sp.grw.calendar.util
 
 import java.util.Calendar
 import java.util.TimeZone
+import sp.grw.calendar.entity.Payload
 import sp.grw.calendar.entity.YearMonth
 import sp.grw.calendar.entity.YearMonthDay
 import sp.grw.calendar.entity.YearWeek
@@ -81,5 +82,34 @@ internal object DateUtil {
         result.firstDayOfWeek = firstDayOfWeek
         result.minimalDaysInFirstWeek = minimalDaysInFirstWeek
         return result
+    }
+
+    fun isBeforeToday(
+        firstDayOfWeek: Int,
+        timeZone: TimeZone,
+        year: Int,
+        month: Int,
+        dayOfMonth: Int
+    ): Boolean {
+        val today = calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        )
+        return when {
+            today[Calendar.YEAR] > year -> true
+            today[Calendar.YEAR] == year -> {
+                when {
+                    today[Calendar.MONTH] > month -> true
+                    today[Calendar.MONTH] == month -> {
+                        when {
+                            today[Calendar.DAY_OF_MONTH] > dayOfMonth -> true
+                            else -> false
+                        }
+                    }
+                    else -> false
+                }
+            }
+            else -> false
+        }
     }
 }

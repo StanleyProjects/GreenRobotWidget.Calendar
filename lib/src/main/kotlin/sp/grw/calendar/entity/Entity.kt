@@ -103,3 +103,14 @@ internal class Payload(
         }
     }
 }
+
+internal fun Payload.isPresent(year: Int, month: Int, dayOfMonth: Int): Boolean {
+    val data = getData(year = year, month = month, dayOfMonth = dayOfMonth)
+    return !data.isNullOrEmpty()
+}
+
+enum class ActiveType {
+    ALL,
+    PAYLOAD,
+    FUTURE,
+}

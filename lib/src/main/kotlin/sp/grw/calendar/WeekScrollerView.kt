@@ -11,9 +11,11 @@ import android.view.View
 import java.util.Calendar
 import java.util.TimeZone
 import kotlin.math.absoluteValue
+import sp.grw.calendar.entity.ActiveType
 import sp.grw.calendar.entity.Payload
 import sp.grw.calendar.entity.YearMonthDay
 import sp.grw.calendar.entity.YearWeek
+import sp.grw.calendar.entity.isPresent
 import sp.grw.calendar.util.AndroidUtil.getTextHeight
 import sp.grw.calendar.util.DateUtil
 import sp.grw.calendar.util.DateUtil.toYearMonthDay
@@ -221,6 +223,11 @@ class WeekScrollerView(context: Context) : View(context) {
         dayTextColorRegular = value
         invalidate()
     }
+    private var dayTextColorNotActive = Color.GRAY
+    fun setDayTextColorNotActive(value: Int) {
+        dayTextColorNotActive = value
+        invalidate()
+    }
     private var dayTextColorSelected = Color.WHITE
     fun setDayTextColorSelected(value: Int) {
         dayTextColorSelected = value
@@ -386,6 +393,25 @@ class WeekScrollerView(context: Context) : View(context) {
         invalidate()
     }
 
+    private var activeType: ActiveType = ActiveType.FUTURE
+    fun setActiveType(value: ActiveType) {
+        activeType = value
+        invalidate()
+    }
+    private fun isActive(year: Int, month: Int, dayOfMonth: Int): Boolean {
+        return when (activeType) {
+            ActiveType.ALL -> true
+            ActiveType.PAYLOAD -> payload.isPresent(year = year, month = month, dayOfMonth = dayOfMonth)
+            ActiveType.FUTURE -> !DateUtil.isBeforeToday(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
+                year = year,
+                month = month,
+                dayOfMonth = dayOfMonth
+            )
+        }
+    }
+
     var onWeekChange: (year: Int, weekOfYear: Int) -> Unit = { _, _ -> } // todo
 
     private var isSelectedDateChanged: Boolean = false
@@ -421,7 +447,10 @@ class WeekScrollerView(context: Context) : View(context) {
         if (!exists) return
         dateSelected = YearMonthDay(year = year, month = month, dayOfMonth = dayOfMonth)
         if (toMove) {
-            yearWeekCurrent = YearWeek(year = year, weekOfYear = value.weekOfYear)
+            val yearWeekOld = yearWeekCurrent
+            if (yearWeekOld == null || yearWeekOld.year != year || yearWeekOld.weekOfYear != value.weekOfYear) {
+                yearWeekCurrent = YearWeek(year = year, weekOfYear = value.weekOfYear)
+            }
         }
         invalidate()
     }
@@ -454,7 +483,10 @@ class WeekScrollerView(context: Context) : View(context) {
             it[Calendar.MONDAY] = yearMonthDay.month
             it[Calendar.DAY_OF_MONTH] = yearMonthDay.dayOfMonth
         }.toYearWeek(firstDayOfWeek = firstDayOfWeek)
-        yearWeekCurrent = value
+        val yearWeekOld = yearWeekCurrent
+        if (yearWeekOld == null || yearWeekOld.year != value.year || yearWeekOld.weekOfYear != value.weekOfYear) {
+            yearWeekCurrent = value
+        }
         invalidate()
     }
     private var xOffset = 0f
@@ -575,26 +607,24 @@ class WeekScrollerView(context: Context) : View(context) {
                 isAutoSelectToday = isAutoSelectToday,
                 isToday = isToday
             )
-            when {
-                isSelected -> {
-                    daySelectedPaint.color = when {
-                        isToday -> daySelectedColorToday
-                        else -> daySelectedColorRegular
-                    }
-                    dayPaint.color = dayTextColorSelected
-                    canvas.drawCircle(
-                        w + cellWidth / 2,
-                        y + dayHeight / 2,
-                        dayHeight / 2,
-                        daySelectedPaint
-                    )
+            val isActive = isActive(year = year, month = month, dayOfMonth = dayOfMonth)
+            dayPaint.color = when {
+                isSelected -> dayTextColorSelected
+                isToday -> dayTextColorToday
+                isActive -> dayTextColorRegular
+                else -> dayTextColorNotActive
+            }
+            if (isSelected) {
+                daySelectedPaint.color = when {
+                    isToday -> daySelectedColorToday
+                    else -> daySelectedColorRegular
                 }
-                isToday -> {
-                    dayPaint.color = dayTextColorToday
-                }
-                else -> {
-                    dayPaint.color = dayTextColorRegular
-                }
+                canvas.drawCircle(
+                    w + cellWidth / 2,
+                    y + dayHeight / 2,
+                    dayHeight / 2,
+                    daySelectedPaint
+                )
             }
             val isWeekendDay = DateUtil.isWeekendDay(firstDayOfWeek = firstDayOfWeek, dayOfWeek = calendar[Calendar.DAY_OF_WEEK])
             if (isWeekendDay) {

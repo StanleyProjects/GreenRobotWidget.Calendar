@@ -11,9 +11,11 @@ import android.view.View
 import java.util.Calendar
 import java.util.TimeZone
 import kotlin.math.absoluteValue
+import sp.grw.calendar.entity.ActiveType
 import sp.grw.calendar.entity.Payload
 import sp.grw.calendar.entity.YearMonth
 import sp.grw.calendar.entity.YearMonthDay
+import sp.grw.calendar.entity.isPresent
 import sp.grw.calendar.util.DateUtil
 import sp.grw.calendar.util.DateUtil.toYearMonth
 import sp.grw.calendar.util.DateUtil.toYearMonthDay
@@ -203,6 +205,11 @@ class MonthScrollerView(context: Context) : View(context) {
     private var dayTextColorRegular = Color.BLACK
     fun setDayTextColorRegular(value: Int) {
         dayTextColorRegular = value
+        invalidate()
+    }
+    private var dayTextColorNotActive = Color.GRAY
+    fun setDayTextColorNotActive(value: Int) {
+        dayTextColorNotActive = value
         invalidate()
     }
     private var dayTextColorSelected = Color.WHITE
@@ -467,9 +474,23 @@ class MonthScrollerView(context: Context) : View(context) {
         return null
     }
 
+    private var activeType: ActiveType = ActiveType.FUTURE
+    fun setActiveType(value: ActiveType) {
+        activeType = value
+        invalidate()
+    }
     private fun isActive(year: Int, month: Int, dayOfMonth: Int): Boolean {
-        val data = payload.getData(year = year, month = month, dayOfMonth = dayOfMonth)
-        return !data.isNullOrEmpty()
+        return when (activeType) {
+            ActiveType.ALL -> true
+            ActiveType.PAYLOAD -> payload.isPresent(year = year, month = month, dayOfMonth = dayOfMonth)
+            ActiveType.FUTURE -> !DateUtil.isBeforeToday(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
+                year = year,
+                month = month,
+                dayOfMonth = dayOfMonth
+            )
+        }
     }
 
     private fun onDrawDay(
@@ -492,7 +513,8 @@ class MonthScrollerView(context: Context) : View(context) {
         dayPaint.color = when {
             isSelected -> dayTextColorSelected
             isToday -> dayTextColorToday
-            else -> dayTextColorRegular
+            isActive -> dayTextColorRegular
+            else -> dayTextColorNotActive
         }
         val alpha: Int
         if (isActive) {
@@ -500,7 +522,6 @@ class MonthScrollerView(context: Context) : View(context) {
         } else {
             alpha = nonActiveAlpha
         }
-        dayPaint.alpha = alpha
         payloadPaint.alpha = alpha
         payloadBackgroundPaint.alpha = alpha
         val dayOfWeek = (firstDayOfWeek + dayOfWeekNumber).let {
