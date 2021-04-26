@@ -9,6 +9,7 @@ import android.graphics.Typeface
 import android.view.MotionEvent
 import android.view.View
 import java.util.Calendar
+import java.util.TimeZone
 import kotlin.math.absoluteValue
 import sp.grw.calendar.entity.Payload
 import sp.grw.calendar.entity.YearMonthDay
@@ -38,6 +39,7 @@ class WeekScrollerView(context: Context) : View(context) {
          */
         private fun allWeeks(
             firstDayOfWeek: Int,
+            timeZone: TimeZone,
             minYear: Int,
             minWeek: Int,
             maxYear: Int,
@@ -45,8 +47,10 @@ class WeekScrollerView(context: Context) : View(context) {
         ): Map<Int, Set<Int>> {
             if (minYear == maxYear) return mapOf(minYear to (minWeek..maxWeek).toSet())
             val result = mutableMapOf<Int, Set<Int>>()
-            val calendar = Calendar.getInstance()
-            calendar.firstDayOfWeek = firstDayOfWeek
+            val calendar = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            )
             calendar[Calendar.YEAR] = minYear
             result[minYear] = (minWeek..calendar.getActualMaximum(Calendar.WEEK_OF_YEAR)).toSet()
             for(year in (minYear + 1) until maxYear) {
@@ -63,12 +67,16 @@ class WeekScrollerView(context: Context) : View(context) {
         private fun allWeeks(
             payload: Payload,
             firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isEmptyTodayWeekSkipped: Boolean
         ): Map<Int, Set<Int>> {
             if (payload.isEmpty()) {
                 return if (isEmptyTodayWeekSkipped) emptyMap()
                 else {
-                    val calendar = Calendar.getInstance()
+                    val calendar = DateUtil.calendar(
+                        firstDayOfWeek = firstDayOfWeek,
+                        timeZone = timeZone
+                    )
                     mapOf(calendar[Calendar.YEAR] to setOf(calendar[Calendar.MONTH]))
                 }
             }
@@ -79,13 +87,17 @@ class WeekScrollerView(context: Context) : View(context) {
             if (isEmptyTodayWeekSkipped) {
                 return allWeeks(
                     firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone,
                     minYear = minYear,
                     minWeek = minWeek,
                     maxYear = maxYear,
                     maxWeek = maxWeek
                 )
             }
-            val today = Calendar.getInstance().toYearWeek(firstDayOfWeek = firstDayOfWeek)
+            val today = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            ).toYearWeek(firstDayOfWeek = firstDayOfWeek)
             val min = when {
                 minYear > today.year -> today
                 minYear == today.year -> YearWeek(year = minYear, weekOfYear = kotlin.math.min(minWeek, today.weekOfYear))
@@ -98,6 +110,7 @@ class WeekScrollerView(context: Context) : View(context) {
             }
             return allWeeks(
                 firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
                 minYear = min.year,
                 minWeek = min.weekOfYear,
                 maxYear = max.year,
@@ -110,6 +123,7 @@ class WeekScrollerView(context: Context) : View(context) {
         private fun onlyWeeksWithDays(
             payload: Payload,
             firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isEmptyTodayWeekSkipped: Boolean
         ): Map<Int, Set<Int>> {
             val result = mutableMapOf<Int, Set<Int>>()
@@ -117,7 +131,10 @@ class WeekScrollerView(context: Context) : View(context) {
                 result[year] = weeks
             }
             if (!isEmptyTodayWeekSkipped) {
-                val today = Calendar.getInstance().toYearWeek(firstDayOfWeek = firstDayOfWeek)
+                val today = DateUtil.calendar(
+                    firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone
+                ).toYearWeek(firstDayOfWeek = firstDayOfWeek)
                 val weeks = result[today.year].orEmpty() + today.weekOfYear
                 result[today.year] = weeks.sortedBy { it }.toSet()
             }
@@ -129,6 +146,7 @@ class WeekScrollerView(context: Context) : View(context) {
         private fun getWeeks(
             payload: Payload,
             firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isEmptyWeeksSkipped: Boolean,
             isEmptyTodayWeekSkipped: Boolean
         ): Map<Int, Set<Int>> {
@@ -136,12 +154,14 @@ class WeekScrollerView(context: Context) : View(context) {
                 onlyWeeksWithDays(
                     payload = payload,
                     firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone,
                     isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
                 )
             } else {
                 allWeeks(
                     payload = payload,
                     firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone,
                     isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
                 )
             }
@@ -150,14 +170,19 @@ class WeekScrollerView(context: Context) : View(context) {
         private fun getYearWeekDefault(
             payload: Payload,
             firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isEmptyWeeksSkipped: Boolean,
             isEmptyTodayWeekSkipped: Boolean
         ): YearWeek? {
-            val today = Calendar.getInstance().toYearWeek(firstDayOfWeek = firstDayOfWeek)
+            val today = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            ).toYearWeek(firstDayOfWeek = firstDayOfWeek)
             if (!isEmptyTodayWeekSkipped) return today
             val weeks = getWeeks(
                 payload = payload,
                 firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
                 isEmptyWeeksSkipped = isEmptyWeeksSkipped,
                 isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
             )
@@ -256,6 +281,7 @@ class WeekScrollerView(context: Context) : View(context) {
         yearWeekCurrent = getYearWeekDefault(
             payload = payload,
             firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
             isEmptyWeeksSkipped = isEmptyWeeksSkipped,
             isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
         )
@@ -290,6 +316,11 @@ class WeekScrollerView(context: Context) : View(context) {
         firstDayOfWeek = value
         invalidate()
     }
+    private var timeZone: TimeZone = Calendar.getInstance().timeZone
+    fun setTimeZone(value: TimeZone) {
+        timeZone = value
+        invalidate()
+    }
 
     private var isEmptyWeeksSkipped: Boolean = true
     fun toSkipEmptyWeeks(value: Boolean) {
@@ -298,6 +329,7 @@ class WeekScrollerView(context: Context) : View(context) {
         val containsCurrent = old != null && getWeeks(
             payload = payload,
             firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
             isEmptyWeeksSkipped = value,
             isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
         ).any { (year, weeks) ->
@@ -309,6 +341,7 @@ class WeekScrollerView(context: Context) : View(context) {
             yearWeekCurrent = getYearWeekDefault(
                 payload = payload,
                 firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
                 isEmptyWeeksSkipped = value,
                 isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
             )
@@ -322,6 +355,7 @@ class WeekScrollerView(context: Context) : View(context) {
         val containsCurrent = old != null && getWeeks(
             payload = payload,
             firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
             isEmptyWeeksSkipped = isEmptyWeeksSkipped,
             isEmptyTodayWeekSkipped = value
         ).any { (year, weeks) ->
@@ -333,6 +367,7 @@ class WeekScrollerView(context: Context) : View(context) {
             yearWeekCurrent = getYearWeekDefault(
                 payload = payload,
                 firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
                 isEmptyWeeksSkipped = value,
                 isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
             )
@@ -389,6 +424,7 @@ class WeekScrollerView(context: Context) : View(context) {
         val yearsToWeeks = getWeeks(
             payload = payload,
             firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
             isEmptyWeeksSkipped = isEmptyWeeksSkipped,
             isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
         )
@@ -416,6 +452,7 @@ class WeekScrollerView(context: Context) : View(context) {
         val yearsToWeeks = getWeeks(
             payload = payload,
             firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
             isEmptyWeeksSkipped = isEmptyWeeksSkipped,
             isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
         )
@@ -514,8 +551,10 @@ class WeekScrollerView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas?) {
         if (canvas == null) return
         val current = yearWeekCurrent ?: return
-        val calendar = Calendar.getInstance()
-        calendar.firstDayOfWeek = firstDayOfWeek
+        val calendar = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        )
         calendar[Calendar.YEAR] = current.year
         calendar[Calendar.WEEK_OF_YEAR] = current.weekOfYear
         onDrawWeek(canvas, calendar, xOffset = xOffset)
@@ -582,8 +621,10 @@ class WeekScrollerView(context: Context) : View(context) {
             val dayWidth = width.toFloat() / DateUtil.DAYS_IN_WEEK
             val dayOfWeekNumber: Int = (x / dayWidth).toInt()
             val current = requireNotNull(yearWeekCurrent)
-            val calendar = Calendar.getInstance()
-            calendar.firstDayOfWeek = firstDayOfWeek
+            val calendar = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            )
             calendar[Calendar.YEAR] = current.year
             calendar[Calendar.WEEK_OF_YEAR] = current.weekOfYear
             calendar[Calendar.DAY_OF_WEEK] = firstDayOfWeek + dayOfWeekNumber

@@ -10,12 +10,21 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.Toast
 import java.util.Calendar
+import java.util.TimeZone
+import org.json.JSONArray
 import sp.grw.calendar.MonthScrollerView
 import sp.grw.calendar.ScheduleView
 import sp.grw.calendar.WeekScrollerView
 
 class MainActivity : Activity() {
-	private class Event(val startTime: Long, val endTime: Long, val type: String)
+    private class Event(val startTime: Long, val endTime: Long, val type: String)
+
+    companion object {
+        private val timeZoneSource = TimeZone.getTimeZone("UTC")
+//        private val timeZoneTarget = TimeZone.getDefault()
+        private val timeZoneTarget = timeZoneSource
+    }
+/*
 	private val events = mapOf(
     	2021 to mapOf(
     		Calendar.APRIL to mapOf(
@@ -29,7 +38,7 @@ class MainActivity : Activity() {
             )
 		)
 	).map { (year, months) ->
-        val c = Calendar.getInstance()
+        val c = Calendar.getInstance(timeZoneSource)
         c[Calendar.YEAR] = year
         months.map { (month, days) ->
             c[Calendar.MONTH] = month
@@ -38,10 +47,63 @@ class MainActivity : Activity() {
                 c[Calendar.HOUR_OF_DAY] = 12
                 c[Calendar.MINUTE] = 15
                 val t = c.timeInMillis
-                Event(startTime = t, endTime = t + 1_000 * 60 * 75, type = payload)
-            }
+                (0 until 3).map {
+                    Event(startTime = t + it * 1_000 * 60 * 30, endTime = t + 1_000 * 60 * 75 + it * 1_000 * 60 * 30, type = payload)
+                }
+            }.flatten()
         }.flatten()
     }.flatten()
+*/
+
+    private val events = JSONArray("""
+        [
+          {
+            "f": 1620460800,
+            "t": 1620464400,
+            "title": "Встреча"
+          },
+          {
+            "f": 1619521200,
+            "t": 1619524080,
+            "title": "Встреча"
+          },
+          {
+            "f": 1619168400,
+            "t": 1619172000,
+            "title": "Встреча"
+          },
+          {
+            "f": 1619168400,
+            "t": 1619172000,
+            "title": "Встреча"
+          },
+          {
+            "f": 1619082000,
+            "t": 1619085600,
+            "title": "Встреча"
+          },
+          {
+            "f": 1619082000,
+            "t": 1619085600,
+            "title": "Встреча"
+          },
+          {
+            "f": 1619082000,
+            "t": 1619085600,
+            "title": "Встреча"
+          },
+          {
+            "f": 1618668000,
+            "t": 1618669800,
+            "title": "Осмотр"
+          }
+        ]
+    """.trimIndent()).let { array ->
+        (0 until array.length()).map { index ->
+            val item = array.getJSONObject(index)
+            Event(startTime = item.getLong("f") * 1_000, endTime = item.getLong("t") * 1_000, type = item.getString("title"))
+        }
+    }
 
     private fun showToast(message: String) {
     	Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
@@ -52,6 +114,8 @@ class MainActivity : Activity() {
 
     private fun monthScrollerView(context: Context): View {
         val result = MonthScrollerView(context)
+
+        val timeZone = TimeZone.getDefault()
 
         result.setFirstDayOfWeek(value = Calendar.MONDAY)
         result.toSkipEmptyMonths(value = false)
@@ -77,10 +141,10 @@ class MainActivity : Activity() {
         result.setPayloadTextColor(value = Color.parseColor("#36709c"))
         result.setPayloadBackgroundColor(value = Color.parseColor("#e0ebf4"))
         result.toSelectPayloadEmpty(value = true)
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(timeZone)
         val payload: Map<Int, Map<Int, Map<Int, String>>> = events.map {
             calendar.timeInMillis = it.startTime
-            Triple(calendar[Calendar.YEAR], calendar[Calendar.MONTH], calendar[Calendar.DAY_OF_MONTH]) to it.type
+            Triple(calendar[Calendar.YEAR], calendar[Calendar.MONTH], calendar[Calendar.DAY_OF_MONTH]) to it
         }.groupBy { (triple, _) ->
             val (year, _, _) = triple
             year
@@ -89,10 +153,12 @@ class MainActivity : Activity() {
                 val (_, month, _) = triple
                 month
             }.mapValues { (_, days) ->
-                days.map { (triple, type) ->
+                days.groupBy { (triple, _) ->
                     val (_, _, dayOfMonth) = triple
-                    dayOfMonth to type
-                }.toMap()
+                    dayOfMonth
+                }.mapValues { (_, list) ->
+                    list.size.toString()
+                }
             }
         }
         result.setPayload(value = payload)
@@ -108,7 +174,18 @@ class MainActivity : Activity() {
         }
         result.toChangeSelectedDate(value = false)
         result.onSelectDate = { year, month, dayOfMonth ->
-            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
+//            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
+            val value = events.filter {
+                calendar.timeZone = timeZoneSource
+                calendar.timeInMillis = it.startTime
+                calendar.timeZone = timeZoneTarget
+                calendar[Calendar.YEAR] == year && calendar[Calendar.MONTH] == month && calendar[Calendar.DAY_OF_MONTH] == dayOfMonth
+            }.joinToString {
+                calendar.timeZone = timeZoneSource
+                calendar.timeInMillis = it.startTime
+                calendar.timeZone = timeZoneTarget
+                String.format("%02d:%02d", calendar[Calendar.HOUR_OF_DAY], calendar[Calendar.MINUTE])
+            }
             showToast(value)
         }
 
@@ -118,6 +195,7 @@ class MainActivity : Activity() {
         val result = WeekScrollerView(context)
 
         result.setPadding(0, px(dp = 9f).toInt(), 0, px(dp = 1f).toInt())
+        result.setTimeZone(value = timeZoneTarget)
         result.setFirstDayOfWeek(value = Calendar.MONDAY)
         result.toSkipEmptyWeeks(value = false)
         result.toSkipEmptyTodayWeek(value = false)
@@ -151,12 +229,14 @@ class MainActivity : Activity() {
         }
 
         result.toDrawPayload(value = true)
-        result.setPayloadHeight(px(dp = 3f))
-        result.setPayloadMargin(px(dp = 2f))
+        result.setPayloadHeight(value = px(dp = 3f))
+        result.setPayloadMargin(value = px(dp = 2f))
         result.setPayloadColor(value = Color.parseColor("#af1833"))
         val calendar = Calendar.getInstance()
         val payload: Map<Int, Map<Int, Map<Int, String>>> = events.map {
+            calendar.timeZone = timeZoneSource
             calendar.timeInMillis = it.startTime
+            calendar.timeZone = timeZoneTarget
             Triple(calendar[Calendar.YEAR], calendar[Calendar.MONTH], calendar[Calendar.DAY_OF_MONTH]) to it.type
         }.groupBy { (triple, _) ->
             val (year, _, _) = triple
@@ -166,10 +246,12 @@ class MainActivity : Activity() {
                 val (_, month, _) = triple
                 month
             }.mapValues { (_, days) ->
-                days.map { (triple, type) ->
+                days.groupBy { (triple, _) ->
                     val (_, _, dayOfMonth) = triple
-                    dayOfMonth to type
-                }.toMap()
+                    dayOfMonth
+                }.mapValues { (_, list) ->
+                    list.size.toString()
+                }
             }
         }
         result.setPayload(value = payload)
@@ -180,7 +262,18 @@ class MainActivity : Activity() {
         }
         result.toChangeSelectedDate(value = true)
         result.onSelectDate = { year, month, dayOfMonth ->
-            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
+//            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
+            val value = events.filter {
+                calendar.timeZone = timeZoneSource
+                calendar.timeInMillis = it.startTime
+                calendar.timeZone = timeZoneTarget
+                calendar[Calendar.YEAR] == year && calendar[Calendar.MONTH] == month && calendar[Calendar.DAY_OF_MONTH] == dayOfMonth
+            }.joinToString {
+                calendar.timeZone = timeZoneSource
+                calendar.timeInMillis = it.startTime
+                calendar.timeZone = timeZoneTarget
+                String.format("%02d:%02d", calendar[Calendar.HOUR_OF_DAY], calendar[Calendar.MINUTE])
+            }
             showToast(value)
         }
 
@@ -190,13 +283,14 @@ class MainActivity : Activity() {
         val result = ScheduleView(context)
 
         val timeRange = (8 * 60)..(8 * 60 + 10 * 60)
-        val target = Calendar.getInstance().also {
+        val target = Calendar.getInstance(timeZoneTarget).also {
             it.timeInMillis = events.minBy { event -> event.startTime }!!.startTime
         }
 
+        result.setTimeZone(value = timeZoneTarget)
         result.setPadding(0, px(dp = 14f).toInt(), 0, px(dp = 14f).toInt())
         result.setTimeRange(start = timeRange.start, endInclusive = timeRange.endInclusive)
-        result.setTimeTextMargin(px(dp = 16f))
+        result.setTimeTextMargin(value = px(dp = 16f))
         result.setTimeTextSize(value = px(dp = 11f))
         result.setTimeTextColor(value = Color.parseColor("#969696"))
 
@@ -222,11 +316,11 @@ class MainActivity : Activity() {
         result.setGroupPaddingStart(value = px(dp = 6f))
         result.setGroupPaddingEnd(value = px(dp = 4f))
         result.setGroupBackgroundColor(value = Color.parseColor("#accde6"))
-        result.setGroupBackgroundAlpha(isActive = true, value = 255 / 100 * 35)
-        result.setGroupBackgroundAlpha(isActive = false, value = 255 / 100 * 25)
+        result.setGroupBackgroundAlpha(isActive = true, value = (255f / 100 * 35).toInt())
+        result.setGroupBackgroundAlpha(isActive = false, value = (255f / 100 * 25).toInt())
         result.setGroupForegroundColor(value = Color.parseColor("#36709c"))
-        result.setGroupForegroundAlpha(isActive = true, value = 255 / 100 * 100)
-        result.setGroupForegroundAlpha(isActive = false, value = 255 / 100 * 60)
+        result.setGroupForegroundAlpha(isActive = true, value = (255f / 100 * 100).toInt())
+        result.setGroupForegroundAlpha(isActive = false, value = (255f / 100 * 60).toInt())
         result.setGroupRadius(value = px(dp = 2f))
         result.setGroupLineCountMax(value = 3)
         result.setGroupTextSize(value = px(dp = 11f))
@@ -234,12 +328,16 @@ class MainActivity : Activity() {
 
         val calendar = Calendar.getInstance()
         val payload: List<Triple<Int, Int, String>> = events.filter {
+            calendar.timeZone = timeZoneSource
             calendar.timeInMillis = it.startTime
+            calendar.timeZone = timeZoneTarget
             val sy = calendar[Calendar.YEAR]
             val sm = calendar[Calendar.MONTH]
             val sd = calendar[Calendar.DAY_OF_MONTH]
             val sMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
+            calendar.timeZone = timeZoneSource
             calendar.timeInMillis = it.endTime
+            calendar.timeZone = timeZoneTarget
             val ey = calendar[Calendar.YEAR]
             val em = calendar[Calendar.MONTH]
             val ed = calendar[Calendar.DAY_OF_MONTH]
@@ -250,17 +348,20 @@ class MainActivity : Activity() {
             sMinutes >= timeRange.start &&
             eMinutes <= timeRange.endInclusive
         }.map {
+            calendar.timeZone = timeZoneSource
             calendar.timeInMillis = it.startTime
-            val sh = calendar[Calendar.HOUR_OF_DAY]
-            val sm = calendar[Calendar.MINUTE]
+            calendar.timeZone = timeZoneTarget
+            val sMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
+            calendar.timeZone = timeZoneSource
             calendar.timeInMillis = it.endTime
-            val eh = calendar[Calendar.HOUR_OF_DAY]
-            val em = calendar[Calendar.MINUTE]
-            Triple(sh * 60 + sm, eh * 60 + em, it.type)
+            calendar.timeZone = timeZoneTarget
+            val eMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
+            Triple(sMinutes, eMinutes, it.type)
         }
         result.setPayload(list = payload)
 
         result.onGroupClick = { start, end ->
+            calendar.timeZone = timeZoneTarget
             val event = events.filter {
                 calendar.timeInMillis = it.startTime
                 val sy = calendar[Calendar.YEAR]
@@ -279,9 +380,9 @@ class MainActivity : Activity() {
                 end >= eMinutes
             }.minBy { it.startTime }
             if (event == null) {
-                Toast.makeText(context, "null", Toast.LENGTH_SHORT).show()
+                showToast("null")
             } else {
-                Toast.makeText(context, event.type, Toast.LENGTH_SHORT).show()
+                showToast(event.type)
             }
         }
 
@@ -291,9 +392,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-//        val view = monthScrollerView(context)
+        val view = monthScrollerView(context)
 //        val view = weekScrollerView(context)
-        val view = scheduleView(context)
+//        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
             view.background = ColorDrawable(Color.WHITE)

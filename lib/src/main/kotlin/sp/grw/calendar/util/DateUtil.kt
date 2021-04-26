@@ -1,6 +1,7 @@
 package sp.grw.calendar.util
 
 import java.util.Calendar
+import java.util.TimeZone
 import sp.grw.calendar.entity.YearMonth
 import sp.grw.calendar.entity.YearMonthDay
 import sp.grw.calendar.entity.YearWeek
@@ -68,5 +69,17 @@ internal object DateUtil {
         else dateSelected.year == year &&
             dateSelected.month == month &&
             dateSelected.dayOfMonth == dayOfMonth
+    }
+
+    fun calendar(
+        firstDayOfWeek: Int,
+        timeZone: TimeZone,
+        minimalDaysInFirstWeek: Int = 1 // todo
+    ): Calendar {
+        val result = Calendar.getInstance()
+        result.timeZone = timeZone
+        result.firstDayOfWeek = firstDayOfWeek
+        result.minimalDaysInFirstWeek = minimalDaysInFirstWeek
+        return result
     }
 }

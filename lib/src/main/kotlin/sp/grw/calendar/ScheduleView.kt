@@ -8,11 +8,13 @@ import android.graphics.Path
 import android.view.MotionEvent
 import android.view.View
 import java.util.Calendar
+import java.util.TimeZone
 import kotlin.math.absoluteValue
 import sp.grw.calendar.entity.YearMonthDay
 import sp.grw.calendar.util.AndroidUtil.appendArc
 import sp.grw.calendar.util.AndroidUtil.drawRoundRect
 import sp.grw.calendar.util.AndroidUtil.getTextHeight
+import sp.grw.calendar.util.DateUtil
 import sp.grw.calendar.util.DateUtil.toYearMonthDay
 
 class ScheduleView(context: Context) : View(context) {
@@ -185,8 +187,14 @@ class ScheduleView(context: Context) : View(context) {
     }
     fun setTimeMarkAuto(year: Int, month: Int, dayOfMonth: Int) {
         // todo check
-        val calendar = Calendar.getInstance()
-        val yearMonthDay = Calendar.getInstance().also {
+        val calendar = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        )
+        val yearMonthDay = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        ).also {
             it[Calendar.YEAR] = year
             it[Calendar.MONTH] = month
             it[Calendar.DAY_OF_MONTH] = dayOfMonth
@@ -338,6 +346,13 @@ class ScheduleView(context: Context) : View(context) {
         invalidate()
     }
 
+    private var firstDayOfWeek: Int = Calendar.getInstance().firstDayOfWeek
+    private var timeZone: TimeZone = Calendar.getInstance().timeZone
+    fun setTimeZone(value: TimeZone) {
+        timeZone = value
+        invalidate()
+    }
+
     private var ladderSize: Int = 4 // todo default
     private var groupMatrix: Array<Array<List<Item>>> = Array(ladderSize) { emptyArray<List<Item>>() }
     fun setPayload(list: List<Triple<Int, Int, String>>) {
@@ -477,7 +492,10 @@ class ScheduleView(context: Context) : View(context) {
             }
         }
         val current = yearMonthDayCurrent
-        val today = Calendar.getInstance()
+        val today = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        )
         val ladderSize = ladderSize
         val groupMatrix = groupMatrix
         check(ladderSize == groupMatrix.size)

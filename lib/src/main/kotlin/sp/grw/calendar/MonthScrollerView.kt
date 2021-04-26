@@ -9,6 +9,7 @@ import android.graphics.Typeface
 import android.view.MotionEvent
 import android.view.View
 import java.util.Calendar
+import java.util.TimeZone
 import kotlin.math.absoluteValue
 import sp.grw.calendar.entity.Payload
 import sp.grw.calendar.entity.YearMonth
@@ -49,12 +50,17 @@ class MonthScrollerView(context: Context) : View(context) {
          */
         private fun allMonths(
             payload: Payload,
+            firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isEmptyTodayMonthSkipped: Boolean
         ): Map<Int, Set<Int>> {
             if (payload.isEmpty()) {
                 return if (isEmptyTodayMonthSkipped) emptyMap()
                 else {
-                    val calendar = Calendar.getInstance()
+                    val calendar = DateUtil.calendar(
+                        firstDayOfWeek = firstDayOfWeek,
+                        timeZone = timeZone
+                    )
                     mapOf(calendar[Calendar.YEAR] to setOf(calendar[Calendar.MONTH]))
                 }
             }
@@ -71,7 +77,10 @@ class MonthScrollerView(context: Context) : View(context) {
                     maxMonth = maxMonth
                 )
             }
-            val today = Calendar.getInstance().toYearMonth()
+            val today = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            ).toYearMonth()
             val min = when {
                 minYear > today.year -> today
                 minYear == today.year -> YearMonth(year = minYear, month = kotlin.math.min(minMonth, today.month))
@@ -95,6 +104,8 @@ class MonthScrollerView(context: Context) : View(context) {
          */
         private fun onlyMonthsWithDays(
             payload: Payload,
+            firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isTodayMonthIfEmptySkipped: Boolean
         ): Map<Int, Set<Int>> {
             val result = mutableMapOf<Int, Set<Int>>()
@@ -102,7 +113,10 @@ class MonthScrollerView(context: Context) : View(context) {
                 result[year] = months
             }
             if (!isTodayMonthIfEmptySkipped) {
-                val calendar = Calendar.getInstance()
+                val calendar = DateUtil.calendar(
+                    firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone
+                )
                 val months = result[calendar[Calendar.YEAR]].orEmpty() + calendar[Calendar.MONTH]
                 result[calendar[Calendar.YEAR]] = months.sortedBy { it }.toSet()
             }
@@ -114,25 +128,44 @@ class MonthScrollerView(context: Context) : View(context) {
          */
         private fun getMonths(
             payload: Payload,
+            firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isEmptyMonthsSkipped: Boolean,
             isEmptyTodayMonthSkipped: Boolean
         ): Map<Int, Set<Int>> {
             return if (isEmptyMonthsSkipped) {
-                onlyMonthsWithDays(payload = payload, isTodayMonthIfEmptySkipped = isEmptyTodayMonthSkipped)
+                onlyMonthsWithDays(
+                    payload = payload,
+                    firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone,
+                    isTodayMonthIfEmptySkipped = isEmptyTodayMonthSkipped
+                )
             } else {
-                allMonths(payload = payload, isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped)
+                allMonths(
+                    payload = payload,
+                    firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone,
+                    isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
+                )
             }
         }
 
         private fun getYearMonthDefault(
             payload: Payload,
+            firstDayOfWeek: Int,
+            timeZone: TimeZone,
             isEmptyMonthsSkipped: Boolean,
             isEmptyTodayMonthSkipped: Boolean
         ): YearMonth? {
-            val today = Calendar.getInstance().toYearMonth()
+            val today = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            ).toYearMonth()
             if (!isEmptyTodayMonthSkipped) return today
             val months = getMonths(
                 payload = payload,
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
                 isEmptyMonthsSkipped = isEmptyMonthsSkipped,
                 isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
             )
@@ -209,6 +242,8 @@ class MonthScrollerView(context: Context) : View(context) {
         payload = Payload(value)
         yearMonthCurrent = getYearMonthDefault(
             payload = payload,
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
             isEmptyMonthsSkipped = isEmptyMonthsSkipped,
             isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
         )
@@ -263,6 +298,8 @@ class MonthScrollerView(context: Context) : View(context) {
         if (!containsCurrent) {
 	        yearMonthCurrent = getYearMonthDefault(
 	            payload = payload,
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
 	            isEmptyMonthsSkipped = value,
 	            isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
 	        )
@@ -281,6 +318,8 @@ class MonthScrollerView(context: Context) : View(context) {
         if (!containsCurrent) {
 	        yearMonthCurrent = getYearMonthDefault(
 	            payload = payload,
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone,
 	            isEmptyMonthsSkipped = isEmptyMonthsSkipped,
 	            isEmptyTodayMonthSkipped = value
 	        )
@@ -292,6 +331,11 @@ class MonthScrollerView(context: Context) : View(context) {
     fun setFirstDayOfWeek(value: Int) {
         check(value in Calendar.SUNDAY..Calendar.SATURDAY)
         firstDayOfWeek = value
+        invalidate()
+    }
+    private var timeZone: TimeZone = Calendar.getInstance().timeZone
+    fun setTimeZone(value: TimeZone) {
+        timeZone = value
         invalidate()
     }
 
@@ -371,6 +415,8 @@ class MonthScrollerView(context: Context) : View(context) {
     private fun getMonths(): Map<Int, Set<Int>> {
         return getMonths(
             payload = payload,
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
             isEmptyMonthsSkipped = isEmptyMonthsSkipped,
             isEmptyTodayMonthSkipped = isEmptyTodayMonthSkipped
         )
@@ -419,13 +465,6 @@ class MonthScrollerView(context: Context) : View(context) {
             }
         }
         return null
-    }
-
-    private fun getCalendar(): Calendar {
-        val result = Calendar.getInstance()
-        result.firstDayOfWeek = firstDayOfWeek
-        result.minimalDaysInFirstWeek = 1 // todo
-        return result
     }
 
     private fun isActive(year: Int, month: Int, dayOfMonth: Int): Boolean {
@@ -520,7 +559,10 @@ class MonthScrollerView(context: Context) : View(context) {
         yearTarget: Int,
         monthTarget: Int
     ) {
-        val calendar = getCalendar()
+        val calendar = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        )
         val today = calendar.toYearMonthDay()
         val weeksInMonth = DateUtil.calculateWeeksInMonth(
             year = yearTarget,
@@ -662,7 +704,10 @@ class MonthScrollerView(context: Context) : View(context) {
         if (y > weeksInMonth * cellHeight) return true
         val weekNumber: Int = (y / cellHeight).toInt()
         val dayOfWeekNumber: Int = (x / cellWidth).toInt()
-        val calendar = getCalendar()
+        val calendar = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        )
         calendar[Calendar.YEAR] = current.year
         calendar[Calendar.MONTH] = current.month
         calendar[Calendar.DAY_OF_MONTH] = 1
