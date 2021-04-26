@@ -384,7 +384,64 @@ class MonthScrollerView(context: Context) : View(context) {
     var onSelectDate: (year: Int, month: Int, dayOfMonth: Int) -> Unit = { _, _, _ -> } // todo
 
     private var dateSelected: YearMonthDay? = null
+    fun selectDate(year: Int, month: Int, dayOfMonth: Int, toMove: Boolean) {
+        val old = dateSelected
+        if (old != null && old.year == year && old.month == month && old.dayOfMonth == dayOfMonth) return
+        val value = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        ).also {
+            it[Calendar.YEAR] = year
+            it[Calendar.MONDAY] = month
+            it[Calendar.DAY_OF_MONTH] = dayOfMonth
+        }.toYearMonth()
+        val exists = getMonths().any { (y, months) ->
+            months.any { m ->
+                value.year == y && value.month == m
+            }
+        }
+        if (!exists) return
+        dateSelected = YearMonthDay(year = year, month = month, dayOfMonth = dayOfMonth)
+        if (toMove) {
+            val yearMonthOld = yearMonthCurrent
+            if (yearMonthOld == null || yearMonthOld.year != year || yearMonthOld.month != value.month) {
+                yearMonthCurrent = YearMonth(year = year, month = value.month)
+            }
+        }
+        invalidate()
+    }
     private var yearMonthCurrent: YearMonth? = null
+    fun setYearMonth(year: Int, month: Int) {
+        val old = yearMonthCurrent
+        if (old != null && old.year == year && old.month == month) return
+        val exists = getMonths().any { (y, months) ->
+            months.any { m ->
+                year == y && month == m
+            }
+        }
+        if (!exists) return
+        yearMonthCurrent = YearMonth(year = year, month = month)
+        invalidate()
+    }
+    fun setYearMonthSelected() {
+        val yearMonthDay = dateSelected ?: if (isAutoSelectToday) DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        ).toYearMonthDay() else return
+        val value = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        ).also {
+            it[Calendar.YEAR] = yearMonthDay.year
+            it[Calendar.MONDAY] = yearMonthDay.month
+            it[Calendar.DAY_OF_MONTH] = yearMonthDay.dayOfMonth
+        }.toYearMonth()
+        val yearMonthOld = yearMonthCurrent
+        if (yearMonthOld == null || yearMonthOld.year != value.year || yearMonthOld.month != value.month) {
+            yearMonthCurrent = value
+        }
+        invalidate()
+    }
     private var cellWidth = 0f
     private var xOffset = 0f
     private var startedTrackingXOffset = 0f

@@ -198,7 +198,40 @@ class MainActivity : Activity() {
             showToast(value)
         }
 
-        return result
+        return LinearLayout(context).also {
+            it.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            it.orientation = LinearLayout.VERTICAL
+            it.addView(result)
+            it.addView(Button(context).also { button ->
+                button.text = "select today"
+                button.setOnClickListener {
+                    val c = Calendar.getInstance().also { c ->
+                        c.firstDayOfWeek = firstDayOfWeek
+                        c.timeZone = timeZoneTarget
+                    }
+                    result.selectDate(year = c[Calendar.YEAR], month = c[Calendar.MONTH], dayOfMonth = c[Calendar.DAY_OF_MONTH], toMove = false)
+                }
+            })
+            it.addView(Button(context).also { button ->
+                button.text = "select today month"
+                button.setOnClickListener {
+                    val c = Calendar.getInstance().also { c ->
+                        c.firstDayOfWeek = firstDayOfWeek
+                        c.timeZone = timeZoneTarget
+                    }
+                    result.setYearMonth(year = c[Calendar.YEAR], month = c[Calendar.MONTH])
+                }
+            })
+            it.addView(Button(context).also { button ->
+                button.text = "to month selected"
+                button.setOnClickListener {
+                    result.setYearMonthSelected()
+                }
+            })
+        }
     }
     private fun weekScrollerView(context: Context): View {
         val result = WeekScrollerView(context)

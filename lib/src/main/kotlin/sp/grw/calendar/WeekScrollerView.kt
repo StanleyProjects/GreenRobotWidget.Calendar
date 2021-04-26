@@ -474,7 +474,10 @@ class WeekScrollerView(context: Context) : View(context) {
         invalidate()
     }
     fun setYearWeekSelected() {
-        val yearMonthDay = dateSelected ?: return
+        val yearMonthDay = dateSelected ?: if (isAutoSelectToday) DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        ).toYearMonthDay() else return
         val value = DateUtil.calendar(
             firstDayOfWeek = firstDayOfWeek,
             timeZone = timeZone
