@@ -309,6 +309,11 @@ class WeekScrollerView(context: Context) : View(context) {
         payloadPaint.color = value
         invalidate()
     }
+    private var isPayloadEmptySelectable: Boolean = false
+    fun toSelectPayloadEmpty(value: Boolean) {
+        isPayloadEmptySelectable = value
+        invalidate()
+    }
 
     private var firstDayOfWeek: Int = Calendar.getInstance().firstDayOfWeek
     fun setFirstDayOfWeek(value: Int) {
@@ -391,7 +396,67 @@ class WeekScrollerView(context: Context) : View(context) {
     var onSelectDate: (year: Int, month: Int, dayOfMonth: Int) -> Unit = { _, _, _ -> } // todo
 
     private var dateSelected: YearMonthDay? = null
+    fun selectDate(year: Int, month: Int, dayOfMonth: Int, toMove: Boolean) {
+        val old = dateSelected
+        if (old != null && old.year == year && old.month == month && old.dayOfMonth == dayOfMonth) return
+        val value = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        ).also {
+            it[Calendar.YEAR] = year
+            it[Calendar.MONDAY] = month
+            it[Calendar.DAY_OF_MONTH] = dayOfMonth
+        }.toYearWeek(firstDayOfWeek = firstDayOfWeek)
+        val exists = getWeeks(
+            payload = payload,
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
+            isEmptyWeeksSkipped = isEmptyWeeksSkipped,
+            isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
+        ).any { (y, weeks) ->
+            weeks.any { weekOfYear ->
+                value.year == y && value.weekOfYear == weekOfYear
+            }
+        }
+        if (!exists) return
+        dateSelected = YearMonthDay(year = year, month = month, dayOfMonth = dayOfMonth)
+        if (toMove) {
+            yearWeekCurrent = YearWeek(year = year, weekOfYear = value.weekOfYear)
+        }
+        invalidate()
+    }
     private var yearWeekCurrent: YearWeek? = null
+    fun setYearWeek(year: Int, weekOfYear: Int) {
+        val old = yearWeekCurrent
+        if (old != null && old.year == year && old.weekOfYear == weekOfYear) return
+        val exists = getWeeks(
+            payload = payload,
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone,
+            isEmptyWeeksSkipped = isEmptyWeeksSkipped,
+            isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
+        ).any { (y, weeks) ->
+            weeks.any { w ->
+                year == y && weekOfYear == w
+            }
+        }
+        if (!exists) return
+        yearWeekCurrent = YearWeek(year = year, weekOfYear = weekOfYear)
+        invalidate()
+    }
+    fun setYearWeekSelected() {
+        val yearMonthDay = dateSelected ?: return
+        val value = DateUtil.calendar(
+            firstDayOfWeek = firstDayOfWeek,
+            timeZone = timeZone
+        ).also {
+            it[Calendar.YEAR] = yearMonthDay.year
+            it[Calendar.MONDAY] = yearMonthDay.month
+            it[Calendar.DAY_OF_MONTH] = yearMonthDay.dayOfMonth
+        }.toYearWeek(firstDayOfWeek = firstDayOfWeek)
+        yearWeekCurrent = value
+        invalidate()
+    }
     private var xOffset = 0f
     private var startedTrackingXOffset = 0f
     private var animatorX: ObjectAnimator? = null
@@ -629,11 +694,23 @@ class WeekScrollerView(context: Context) : View(context) {
             calendar[Calendar.WEEK_OF_YEAR] = current.weekOfYear
             calendar[Calendar.DAY_OF_WEEK] = firstDayOfWeek + dayOfWeekNumber
             val result = calendar.toYearMonthDay()
-            if (isSelectedDateChanged) {
-                dateSelected = result
+            val payload = payload.getData(year = result.year, month = result.month, dayOfMonth = result.dayOfMonth)
+            if (isPayloadEmptySelectable || payload != null) {
+                val isSelected = DateUtil.isSelected(
+                    year = result.year,
+                    month = result.month,
+                    dayOfMonth = result.dayOfMonth,
+                    dateSelected = dateSelected,
+                    isAutoSelectToday = isAutoSelectToday
+                )
+                if (!isSelected) {
+                    if (isSelectedDateChanged) {
+                        dateSelected = result
+                        invalidate()
+                    }
+                }
+                onSelectDate(result.year, result.month, result.dayOfMonth)
             }
-            invalidate()
-            onSelectDate(result.year, result.month, result.dayOfMonth)
         }
         return true
     }

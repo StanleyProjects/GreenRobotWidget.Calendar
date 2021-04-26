@@ -7,7 +7,10 @@ import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.Toast
 import java.util.Calendar
 import java.util.TimeZone
@@ -23,6 +26,7 @@ class MainActivity : Activity() {
         private val timeZoneSource = TimeZone.getTimeZone("UTC")
 //        private val timeZoneTarget = TimeZone.getDefault()
         private val timeZoneTarget = timeZoneSource
+        private val firstDayOfWeek = Calendar.MONDAY
     }
 /*
 	private val events = mapOf(
@@ -117,6 +121,7 @@ class MainActivity : Activity() {
 
         val timeZone = TimeZone.getDefault()
 
+        result.setTimeZone(value = timeZoneTarget)
         result.setFirstDayOfWeek(value = Calendar.MONDAY)
         result.toSkipEmptyMonths(value = false)
         result.toSkipEmptyTodayMonth(value = false)
@@ -196,7 +201,7 @@ class MainActivity : Activity() {
 
         result.setPadding(0, px(dp = 9f).toInt(), 0, px(dp = 1f).toInt())
         result.setTimeZone(value = timeZoneTarget)
-        result.setFirstDayOfWeek(value = Calendar.MONDAY)
+        result.setFirstDayOfWeek(value = firstDayOfWeek)
         result.toSkipEmptyWeeks(value = false)
         result.toSkipEmptyTodayWeek(value = false)
         result.toSelectTodayAuto(value = true)
@@ -232,6 +237,7 @@ class MainActivity : Activity() {
         result.setPayloadHeight(value = px(dp = 3f))
         result.setPayloadMargin(value = px(dp = 2f))
         result.setPayloadColor(value = Color.parseColor("#af1833"))
+        result.toSelectPayloadEmpty(value = true)
         val calendar = Calendar.getInstance()
         val payload: Map<Int, Map<Int, Map<Int, String>>> = events.map {
             calendar.timeZone = timeZoneSource
@@ -277,7 +283,40 @@ class MainActivity : Activity() {
             showToast(value)
         }
 
-        return result
+        return LinearLayout(context).also {
+            it.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            it.orientation = LinearLayout.VERTICAL
+            it.addView(result)
+            it.addView(Button(context).also { button ->
+                button.text = "select today"
+                button.setOnClickListener {
+                    val c = Calendar.getInstance().also { c ->
+                        c.firstDayOfWeek = firstDayOfWeek
+                        c.timeZone = timeZoneTarget
+                    }
+                    result.selectDate(year = c[Calendar.YEAR], month = c[Calendar.MONTH], dayOfMonth = c[Calendar.DAY_OF_MONTH], toMove = false)
+                }
+            })
+            it.addView(Button(context).also { button ->
+                button.text = "select today week"
+                button.setOnClickListener {
+                    val c = Calendar.getInstance().also { c ->
+                        c.firstDayOfWeek = firstDayOfWeek
+                        c.timeZone = timeZoneTarget
+                    }
+                    result.setYearWeek(year = c[Calendar.YEAR], weekOfYear = c[Calendar.WEEK_OF_YEAR])
+                }
+            })
+            it.addView(Button(context).also { button ->
+                button.text = "to week selected"
+                button.setOnClickListener {
+                    result.setYearWeekSelected()
+                }
+            })
+        }
     }
     private fun scheduleView(context: Context): View {
         val result = ScheduleView(context)
@@ -392,8 +431,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-        val view = monthScrollerView(context)
-//        val view = weekScrollerView(context)
+//        val view = monthScrollerView(context)
+        val view = weekScrollerView(context)
 //        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)

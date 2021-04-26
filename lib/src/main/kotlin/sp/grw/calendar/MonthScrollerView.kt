@@ -717,10 +717,19 @@ class MonthScrollerView(context: Context) : View(context) {
         if (current.year == result.year && current.month == result.month) {
             val payload = payload.getData(year = result.year, month = result.month, dayOfMonth = result.dayOfMonth)
             if (isPayloadEmptySelectable || payload != null) {
-                if (isSelectedDateChanged) {
-                    dateSelected = result
+                val isSelected = DateUtil.isSelected(
+                    year = result.year,
+                    month = result.month,
+                    dayOfMonth = result.dayOfMonth,
+                    dateSelected = dateSelected,
+                    isAutoSelectToday = isAutoSelectToday
+                )
+                if (!isSelected) {
+                    if (isSelectedDateChanged) {
+                        dateSelected = result
+                        invalidate()
+                    }
                 }
-                invalidate()
                 onSelectDate(result.year, result.month, result.dayOfMonth)
             }
         }
