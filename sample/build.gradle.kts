@@ -41,6 +41,6 @@ dependencies {
     implementation(
         group = "org.jetbrains.kotlin",
         name = "kotlin-stdlib",
-        version = "1.3.72"
+        version = "1.5.10"
     )
 }

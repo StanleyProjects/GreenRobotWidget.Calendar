@@ -67,10 +67,10 @@ class MonthScrollerView(context: Context) : View(context) {
                 }
             }
             val years = payload.getYears()
-            val minYear = years.min()!!
-            val minMonth = payload.getMonths(year = minYear).min()!!
-            val maxYear = years.max()!!
-            val maxMonth = payload.getMonths(year = maxYear).max()!!
+            val minYear = years.minOrNull()!!
+            val minMonth = payload.getMonths(year = minYear).minOrNull()!!
+            val maxYear = years.maxOrNull()!!
+            val maxMonth = payload.getMonths(year = maxYear).maxOrNull()!!
             if (isEmptyTodayMonthSkipped) {
                 return allMonths(
                     minYear = minYear,
@@ -154,8 +154,8 @@ class MonthScrollerView(context: Context) : View(context) {
             }
             if (result.isEmpty()) return emptyMap() // todo
             if (monthOffsetBefore == 0) return result
-            val minYear = result.minBy { (year, _) -> year }!!.key
-            val minMonth = result[minYear]!!.minBy { it }!!
+            val minYear = result.minByOrNull { (year, _) -> year }!!.key
+            val minMonth = result[minYear]!!.minByOrNull { it }!!
             val offset = (1..monthOffsetBefore).map {
                 val calendar = DateUtil.calendar(
                     firstDayOfWeek = firstDayOfWeek,

@@ -380,7 +380,7 @@ class MainActivity : Activity() {
 
         val timeRange = (8 * 60)..(8 * 60 + 10 * 60)
         val target = Calendar.getInstance(timeZoneTarget).also {
-            it.timeInMillis = events.minBy { event -> event.startTime }!!.startTime
+            it.timeInMillis = events.minOfOrNull { event -> event.startTime }!!
         }
 
         result.setTimeZone(value = timeZoneTarget)
@@ -477,7 +477,7 @@ class MainActivity : Activity() {
                 sd == target[Calendar.DAY_OF_MONTH] && ed == target[Calendar.DAY_OF_MONTH] &&
                 start <= sMinutes &&
                 end >= eMinutes
-            }.minBy { it.startTime }
+            }.minByOrNull { it.startTime }
             if (event == null) {
                 showToast("null")
             } else {

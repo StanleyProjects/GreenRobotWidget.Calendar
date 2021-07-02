@@ -38,8 +38,8 @@ class ScheduleView(context: Context) : View(context) {
                 )
             }.flatten().sortedBy { (group, timeType) ->
                 when (timeType) {
-                    TimeType.START -> group.minBy { it.start }!!.start
-                    TimeType.END -> group.maxBy { it.end }!!.end
+                    TimeType.START -> group.minOfOrNull { it.start }!!
+                    TimeType.END -> group.maxOfOrNull { it.end }!!
                 }
             }
             val stack = mutableListOf<List<Item>>()
@@ -53,8 +53,8 @@ class ScheduleView(context: Context) : View(context) {
                 if (stack.isEmpty()) continue
                 if (stack.last() != group) continue
                 while (stack.isNotEmpty()) {
-                    val event = group.maxBy { it.end }!!
-                    val eventLast = stack.last().maxBy { it.end }!!
+                    val event = group.maxByOrNull { it.end }!!
+                    val eventLast = stack.last().maxByOrNull { it.end }!!
                     if (eventLast.end > event.end) break
                     stack.removeAt(stack.lastIndex)
                 }
@@ -391,11 +391,11 @@ class ScheduleView(context: Context) : View(context) {
         val groupWidthFull: Float = width - groupMarginStart - groupMarginEnd
         val groupWidth: Float = (groupWidthFull - groupMargin * (ladderSize - 1)) / ladderSize
         val groupX: Float = groupMarginStart + groupWidth * row + groupMargin * row
-        val start = group.minBy { it.start }!!.start
+        val start = group.minOfOrNull { it.start }!!
         val dY = timeStepHeight / timeStepMinutes
         val startingPointY = yOffset + paddingTop
         val yStart = startingPointY + start * dY - timeRange.start * dY
-        val end = group.maxBy { it.end }!!.end
+        val end = group.maxOfOrNull { it.end }!!
         val dHeight = startingPointY + end * dY - timeRange.start * dY - yStart
         val yEnd = yStart + kotlin.math.max(dHeight, groupMinHeight)
         if (isActive) {
@@ -516,7 +516,7 @@ class ScheduleView(context: Context) : View(context) {
                             today[Calendar.MONTH] > current.month -> false
                             today[Calendar.MONTH] == current.month -> when {
                                 today[Calendar.DAY_OF_MONTH] > current.dayOfMonth -> false
-                                today[Calendar.DAY_OF_MONTH] == current.dayOfMonth -> group.maxBy { it.end }!!.end > today[Calendar.HOUR_OF_DAY] * 60 + today[Calendar.MINUTE]
+                                today[Calendar.DAY_OF_MONTH] == current.dayOfMonth -> group.maxOfOrNull { it.end }!! > today[Calendar.HOUR_OF_DAY] * 60 + today[Calendar.MINUTE]
                                 else -> true
                             }
                             else -> true
@@ -578,9 +578,9 @@ class ScheduleView(context: Context) : View(context) {
                         val startingPointY = yOffset + paddingTop
                         for (group in groupMatrix[row]) {
                             if (group.isEmpty()) continue
-                            val start = group.minBy { it.start }!!.start
+                            val start = group.minOfOrNull { it.start }!!
                             val yStart = startingPointY + start * dY - timeRange.start * dY
-                            val end = group.maxBy { it.end }!!.end
+                            val end = group.maxOfOrNull { it.end }!!
                             val yEnd = startingPointY + end * dY - timeRange.start * dY
                             if (y in yStart..yEnd) {
                                 onGroupClick(start, end)

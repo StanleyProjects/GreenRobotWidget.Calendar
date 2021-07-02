@@ -83,10 +83,10 @@ class WeekScrollerView(context: Context) : View(context) {
                     mapOf(calendar[Calendar.YEAR] to setOf(calendar[Calendar.MONTH]))
                 }
             }
-            val minYear = payload.getYears().min()!!
-            val minWeek = payload.getWeeks(year = minYear, firstDayOfWeek = firstDayOfWeek).min()!!
-            val maxYear = payload.getYears().max()!!
-            val maxWeek = payload.getWeeks(year = maxYear, firstDayOfWeek = firstDayOfWeek).max()!!
+            val minYear = payload.getYears().minOrNull()!!
+            val minWeek = payload.getWeeks(year = minYear, firstDayOfWeek = firstDayOfWeek).minOrNull()!!
+            val maxYear = payload.getYears().maxOrNull()!!
+            val maxWeek = payload.getWeeks(year = maxYear, firstDayOfWeek = firstDayOfWeek).maxOrNull()!!
             if (isEmptyTodayWeekSkipped) {
                 return allWeeks(
                     firstDayOfWeek = firstDayOfWeek,
@@ -179,8 +179,8 @@ class WeekScrollerView(context: Context) : View(context) {
                 firstDayOfWeek = firstDayOfWeek,
                 timeZone = timeZone
             )
-            val minYear = result.minBy { (year, _) -> year }!!.key
-            val minWeek = result[minYear]!!.minBy { it }!!
+            val minYear = result.minByOrNull { (year, _) -> year }!!.key
+            val minWeek = result[minYear]!!.minByOrNull { it }!!
             val minMonth = calendar.let {
                 it[Calendar.YEAR] = minYear
                 it[Calendar.WEEK_OF_YEAR] = minWeek
@@ -193,8 +193,8 @@ class WeekScrollerView(context: Context) : View(context) {
                 it[Calendar.YEAR] = minYear
                 it[Calendar.MONTH] = minMonth - monthOffsetBefore + 1
             }
-            val maxYear = result.maxBy { (year, _) -> year }!!.key
-            val maxWeek = result[minYear]!!.maxBy { it }!!
+            val maxYear = result.maxByOrNull { (year, _) -> year }!!.key
+            val maxWeek = result[minYear]!!.maxByOrNull { it }!!
             val maxMonth = DateUtil.calendar(
                 firstDayOfWeek = firstDayOfWeek,
                 timeZone = timeZone
