@@ -105,9 +105,23 @@ class MainActivity : Activity() {
           }
         ]
     """.trimIndent()).let { array ->
+        val time = Calendar.getInstance().also {
+            it.timeZone = timeZoneSource
+            it[Calendar.HOUR_OF_DAY] = 9
+            it[Calendar.MINUTE] = 0
+            it[Calendar.SECOND] = 0
+        }.timeInMillis
         (0 until array.length()).map { index ->
             val item = array.getJSONObject(index)
-            Event(startTime = item.getLong("f") * 1_000, endTime = item.getLong("t") * 1_000, type = item.getString("title"))
+            val minutes = 10
+//            val minutes = 20
+            Event(
+//                startTime = item.getLong("f") * 1_000,
+                startTime = time + index * 1_000 * 60 * 30,
+//                endTime = item.getLong("t") * 1_000,
+                endTime   = time + 1_000 * 60 * minutes + index * 1_000 * 60 * 30,
+                type = item.getString("title")
+            )
         }
     }
 
@@ -376,7 +390,8 @@ class MainActivity : Activity() {
         result.setTimeTextSize(value = px(dp = 11f))
         result.setTimeTextColor(value = Color.parseColor("#969696"))
 
-        result.setTimeStepMinutes(value = 30)
+        result.setTimeStepMinutes(value = 15)
+//        result.setTimeStepMinutes(value = 30)
         result.setTimeStepHeight(value = px(dp = 40f))
 
         result.setTimeMarkColor(value = Color.parseColor("#af1833"))
@@ -387,7 +402,8 @@ class MainActivity : Activity() {
 
         result.setTimeLineMarginStart(value = px(dp = 52f))
         result.setTimeLineMarginEnd(value = px(dp = 8f))
-        result.setTimeLineCount(value = 1)
+        result.setTimeLineCount(value = 0)
+//        result.setTimeLineCount(value = 1)
         result.setTimeLineColor(value = Color.parseColor("#cccccc"))
         result.setTimeLineSize(value = px(dp = 0.5f))
 
@@ -407,6 +423,7 @@ class MainActivity : Activity() {
         result.setGroupLineCountMax(value = 3)
         result.setGroupTextSize(value = px(dp = 11f))
         result.setGroupTextLineSpace(value = px(dp = 6f))
+        result.setGroupMinHeightInMinutes(value = 15)
 
         val calendar = Calendar.getInstance()
         val payload: List<Triple<Int, Int, String>> = events.filter {
@@ -474,9 +491,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-        val view = monthScrollerView(context)
+//        val view = monthScrollerView(context)
 //        val view = weekScrollerView(context)
-//        val view = scheduleView(context)
+        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
             view.background = ColorDrawable(Color.WHITE)

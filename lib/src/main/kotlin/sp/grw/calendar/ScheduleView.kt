@@ -345,6 +345,12 @@ class ScheduleView(context: Context) : View(context) {
         groupTextLineSpace = value
         invalidate()
     }
+    private var groupMinHeight = 0f
+    fun setGroupMinHeightInMinutes(value: Int) {
+        if (value < 0) error("Negative value!")
+        groupMinHeight = (timeStepHeight / timeStepMinutes) * value
+        invalidate()
+    }
 
     private var firstDayOfWeek: Int = Calendar.getInstance().firstDayOfWeek
     private var timeZone: TimeZone = Calendar.getInstance().timeZone
@@ -390,7 +396,8 @@ class ScheduleView(context: Context) : View(context) {
         val startingPointY = yOffset + paddingTop
         val yStart = startingPointY + start * dY - timeRange.start * dY
         val end = group.maxBy { it.end }!!.end
-        val yEnd = startingPointY + end * dY - timeRange.start * dY
+        val dHeight = startingPointY + end * dY - timeRange.start * dY - yStart
+        val yEnd = yStart + kotlin.math.max(dHeight, groupMinHeight)
         if (isActive) {
             groupBackgroundPaint.alpha = groupBackgroundAlphaActive
             groupForegroundPaint.alpha = groupForegroundAlphaActive
