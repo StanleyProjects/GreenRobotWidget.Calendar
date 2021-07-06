@@ -95,9 +95,12 @@ class ScheduleView(context: Context) : View(context) {
 
         private fun transform(
             list: List<Triple<Int, Int, String>>,
+            timeMinimumInMinutes: Int?,
             ladderSize: Int
         ): List<List<Item>> {
-            val dates = list.map { (start, end, payload) ->
+            val dates = list.map { (start, endActual, payload) ->
+                val end = if (timeMinimumInMinutes == null) endActual
+                else if (endActual - start < timeMinimumInMinutes) start + timeMinimumInMinutes else endActual
                 val item = Item(start = start, end = end, payload = payload)
                 listOf(
                     item to TimeType.START,
@@ -361,8 +364,8 @@ class ScheduleView(context: Context) : View(context) {
 
     private var ladderSize: Int = 4 // todo default
     private var groupMatrix: Array<Array<List<Item>>> = Array(ladderSize) { emptyArray<List<Item>>() }
-    fun setPayload(list: List<Triple<Int, Int, String>>) {
-        val events = transform(list, ladderSize = ladderSize)
+    fun setPayload(list: List<Triple<Int, Int, String>>, timeMinimumInMinutes: Int?) {
+        val events = transform(list, timeMinimumInMinutes = timeMinimumInMinutes, ladderSize = ladderSize)
         groupMatrix = toMatrix(events, ladderSize = ladderSize)
     }
 

@@ -115,14 +115,16 @@ class MainActivity : Activity() {
             val item = array.getJSONObject(index)
             val minutes = 10
 //            val minutes = 20
-            Event(
+            (0..1).map { times ->
+                Event(
 //                startTime = item.getLong("f") * 1_000,
-                startTime = time + index * 1_000 * 60 * 30,
+                    startTime = time + index * 1_000 * 60 * 30 + 1_000 * 60 * (10 * times),
 //                endTime = item.getLong("t") * 1_000,
-                endTime   = time + 1_000 * 60 * minutes + index * 1_000 * 60 * 30,
-                type = item.getString("title")
-            )
-        }
+                    endTime   = time + 1_000 * 60 * minutes + index * 1_000 * 60 * 30 + 1_000 * 60 * (10 * times),
+                    type = item.getString("title") + " #$index/$times"
+                )
+            }
+        }.flatten()
     }
 
     private fun showToast(message: String) {
@@ -423,7 +425,8 @@ class MainActivity : Activity() {
         result.setGroupLineCountMax(value = 3)
         result.setGroupTextSize(value = px(dp = 11f))
         result.setGroupTextLineSpace(value = px(dp = 6f))
-        result.setGroupMinHeightInMinutes(value = 15)
+        val timeMinimumInMinutes = 15
+        result.setGroupMinHeightInMinutes(value = timeMinimumInMinutes)
 
         val calendar = Calendar.getInstance()
         val payload: List<Triple<Int, Int, String>> = events.filter {
@@ -457,7 +460,7 @@ class MainActivity : Activity() {
             val eMinutes = calendar[Calendar.HOUR_OF_DAY] * 60 + calendar[Calendar.MINUTE]
             Triple(sMinutes, eMinutes, it.type)
         }
-        result.setPayload(list = payload)
+        result.setPayload(list = payload, timeMinimumInMinutes = timeMinimumInMinutes)
 
         result.onGroupClick = { start, end ->
             calendar.timeZone = timeZoneTarget
