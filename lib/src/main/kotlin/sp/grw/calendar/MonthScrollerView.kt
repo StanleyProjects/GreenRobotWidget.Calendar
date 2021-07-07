@@ -721,10 +721,9 @@ class MonthScrollerView(context: Context) : View(context) {
                         linePaint
                     )
                 }
-                LineTypeHorizontal.CLIPPED -> {
-                    TODO()
-                }
-	        }
+                LineTypeHorizontal.CLIPPED -> TODO()
+                LineTypeHorizontal.NONE -> TODO()
+            }
         }
         // todo line vertical
     }

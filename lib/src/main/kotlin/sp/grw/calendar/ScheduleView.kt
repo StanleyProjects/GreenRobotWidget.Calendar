@@ -478,9 +478,7 @@ class ScheduleView(context: Context) : View(context) {
                         val rightTextWidth = groupForegroundPaint.measureText(rightText)
                         canvas.drawText(rightText, groupX + groupWidth - rightTextWidth - groupPaddingEnd, yText, groupForegroundPaint)
                     } else {
-                        val count = keys.subList(i, keys.size).sumBy {
-                            map[it]?.size ?: 0
-                        }
+                        val count = keys.subList(i, keys.size).sumOf { map[it]?.size ?: 0 }
                         if (count < 1) break
                         canvas.drawText("...", groupX + groupPaddingStart, yText, groupForegroundPaint)
                         val rightText = "+$count"

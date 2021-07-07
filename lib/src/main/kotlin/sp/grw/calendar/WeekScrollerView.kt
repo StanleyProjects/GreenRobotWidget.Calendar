@@ -218,7 +218,6 @@ class WeekScrollerView(context: Context) : View(context) {
                     calendar[Calendar.DAY_OF_WEEK] = DateUtil.getDayOfWeekAfter(dayOfWeek = firstDayOfWeek, after = DateUtil.DAYS_IN_WEEK - 1)
                     if (minTarget[Calendar.YEAR] > calendar[Calendar.YEAR]) break
                     if (minTarget[Calendar.MONTH] > calendar[Calendar.MONTH]) break
-                    val tmp = calendar.toYearMonthDay()
                     offset.getOrPut(calendar[Calendar.YEAR]) {
                         mutableSetOf()
                     }.add(calendar[Calendar.WEEK_OF_YEAR])

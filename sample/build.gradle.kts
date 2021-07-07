@@ -10,14 +10,14 @@ plugins {
 
 android {
     compileSdkVersion(30)
-    buildToolsVersion("29.0.3")
+    buildToolsVersion("30.0.3")
 
     defaultConfig {
         minSdkVersion(16)
         targetSdkVersion(30)
         applicationId = "sp.service.sample"
-        versionCode = 10
-        versionName = "0.0.10"
+        versionCode = 11
+        versionName = "0.0.11"
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled = true
     }
