@@ -113,14 +113,14 @@ class MainActivity : Activity() {
         }.timeInMillis
         (0 until array.length()).map { index ->
             val item = array.getJSONObject(index)
-            val minutes = 10
+            val minutes = 5
+//            val minutes = 10
+//            val minutes = 15
 //            val minutes = 20
-            (0..1).map { times ->
+            (0..0).map { times ->
                 Event(
-//                startTime = item.getLong("f") * 1_000,
-                    startTime = time + index * 1_000 * 60 * 30 + 1_000 * 60 * (10 * times),
-//                endTime = item.getLong("t") * 1_000,
-                    endTime   = time + 1_000 * 60 * minutes + index * 1_000 * 60 * 30 + 1_000 * 60 * (10 * times),
+                    startTime = time + index * 1_000 * 60 * 30 + times * 1_000 * 60 * 10,
+                    endTime   = time + index * 1_000 * 60 * 30 + times * 1_000 * 60 * 10 + 1_000 * 60 * minutes,
                     type = item.getString("title") + " #$index/$times"
                 )
             }
@@ -422,7 +422,8 @@ class MainActivity : Activity() {
         result.setGroupForegroundAlpha(isActive = true, value = (255f / 100 * 100).toInt())
         result.setGroupForegroundAlpha(isActive = false, value = (255f / 100 * 60).toInt())
         result.setGroupRadius(value = px(dp = 2f))
-        result.setGroupLineCountMax(value = 3)
+//        result.setGroupLineCountMax(value = 3)
+        result.setGroupLineCountMaxByGroupHeight(value = true)
         result.setGroupTextSize(value = px(dp = 11f))
         result.setGroupTextLineSpace(value = px(dp = 6f))
         val timeMinimumInMinutes = 15
@@ -495,8 +496,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         val context: Context = this
 //        val view = monthScrollerView(context)
-        val view = weekScrollerView(context)
-//        val view = scheduleView(context)
+//        val view = weekScrollerView(context)
+        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
             view.background = ColorDrawable(Color.WHITE)

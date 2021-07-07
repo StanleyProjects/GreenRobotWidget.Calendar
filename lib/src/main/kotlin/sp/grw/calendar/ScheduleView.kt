@@ -339,6 +339,12 @@ class ScheduleView(context: Context) : View(context) {
         groupLineCountMax = value
         invalidate()
     }
+    private var groupLineCountMaxByGroupHeight: Boolean = false
+    fun setGroupLineCountMaxByGroupHeight(value: Boolean) {
+        groupLineCountMaxByGroupHeight = value
+        invalidate()
+    }
+
     fun removeGroupLineCountMax() {
         groupLineCountMax = null
         invalidate()
@@ -401,6 +407,7 @@ class ScheduleView(context: Context) : View(context) {
         val end = group.maxOfOrNull { it.end }!!
         val dHeight = startingPointY + end * dY - timeRange.start * dY - yStart
         val yEnd = yStart + kotlin.math.max(dHeight, groupMinHeight)
+        val groupHeight = yEnd - yStart
         if (isActive) {
             groupBackgroundPaint.alpha = groupBackgroundAlphaActive
             groupForegroundPaint.alpha = groupForegroundAlphaActive
@@ -453,11 +460,17 @@ class ScheduleView(context: Context) : View(context) {
                 val keys = map.keys.sortedByDescending {
                     map[it]?.size ?: 0
                 }
+//                val lineCountMax = groupLineCountMax
+                val lineCountMax = if (groupLineCountMaxByGroupHeight) {
+                    val count: Int = (groupHeight / (textHeight + groupTextLineSpace)).toInt() - 1 // todo
+                    if (count <= 0) TODO()
+                    val tmp = groupLineCountMax
+                    if (tmp == null) count else kotlin.math.min(tmp, count)
+                } else groupLineCountMax
                 for (i in keys.indices) {
                     val payload = keys[i]
                     val list = map[payload]
                     if (list.isNullOrEmpty()) continue
-                    val lineCountMax = groupLineCountMax
                     val yText = yStart + textHeight * (i + 1) + groupTextLineSpace * i + groupPaddingTop
                     if (lineCountMax == null || i < lineCountMax) {
                         canvas.drawText(payload, groupX + groupPaddingStart, yText, groupForegroundPaint)
