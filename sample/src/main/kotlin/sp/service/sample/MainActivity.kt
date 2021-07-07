@@ -495,8 +495,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         val context: Context = this
 //        val view = monthScrollerView(context)
-//        val view = weekScrollerView(context)
-        val view = scheduleView(context)
+        val view = weekScrollerView(context)
+//        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
             view.background = ColorDrawable(Color.WHITE)

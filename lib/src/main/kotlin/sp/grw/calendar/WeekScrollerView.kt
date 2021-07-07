@@ -80,7 +80,7 @@ class WeekScrollerView(context: Context) : View(context) {
                         firstDayOfWeek = firstDayOfWeek,
                         timeZone = timeZone
                     )
-                    mapOf(calendar[Calendar.YEAR] to setOf(calendar[Calendar.MONTH]))
+                    mapOf(calendar[Calendar.YEAR] to setOf(calendar[Calendar.WEEK_OF_YEAR]))
                 }
             }
             val minYear = payload.getYears().minOrNull()!!
