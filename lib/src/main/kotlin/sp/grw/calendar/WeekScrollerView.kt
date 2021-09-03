@@ -194,7 +194,7 @@ class WeekScrollerView(context: Context) : View(context) {
                 it[Calendar.MONTH] = minMonth - monthOffsetBefore + 1
             }
             val maxYear = result.maxByOrNull { (year, _) -> year }!!.key
-            val maxWeek = result[minYear]!!.maxByOrNull { it }!!
+            val maxWeek = result[maxYear]!!.maxByOrNull { it }!!
             val maxMonth = DateUtil.calendar(
                 firstDayOfWeek = firstDayOfWeek,
                 timeZone = timeZone

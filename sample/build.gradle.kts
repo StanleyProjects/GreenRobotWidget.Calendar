@@ -16,8 +16,8 @@ android {
         minSdkVersion(16)
         targetSdkVersion(30)
         applicationId = "sp.service.sample"
-        versionCode = 11
-        versionName = "0.0.11"
+        versionCode = 12
+        versionName = "0.0.$versionCode"
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled = true
     }

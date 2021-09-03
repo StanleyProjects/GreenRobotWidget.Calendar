@@ -15,6 +15,7 @@ import android.widget.Toast
 import java.util.Calendar
 import java.util.TimeZone
 import org.json.JSONArray
+import org.json.JSONObject
 import sp.grw.calendar.MonthScrollerView
 import sp.grw.calendar.ScheduleView
 import sp.grw.calendar.WeekScrollerView
@@ -298,11 +299,17 @@ class MainActivity : Activity() {
         result.setPayloadColor(value = Color.parseColor("#af1833"))
         result.toSelectPayloadEmpty(value = true)
         val calendar = Calendar.getInstance()
+        val json = "{\"data\":{\"items\":[]}}"
+        val events = JSONObject(json).getJSONObject("data").getJSONArray("items").let {
+            (0 until it.length()).map { index -> it.getJSONObject(index) }
+        }
         val payload: Map<Int, Map<Int, Map<Int, String>>> = events.map {
-            calendar.timeZone = timeZoneSource
-            calendar.timeInMillis = it.startTime
-            calendar.timeZone = timeZoneTarget
-            Triple(calendar[Calendar.YEAR], calendar[Calendar.MONTH], calendar[Calendar.DAY_OF_MONTH]) to it.type
+            calendar.timeInMillis = (it.getLong("dateFrom") ?: 0) * 1000
+            Triple(
+                calendar[Calendar.YEAR],
+                calendar[Calendar.MONTH],
+                calendar[Calendar.DAY_OF_MONTH]
+            ) to (it.getJSONObject("type").getString("title") ?: "")
         }.groupBy { (triple, _) ->
             val (year, _, _) = triple
             year
@@ -311,15 +318,19 @@ class MainActivity : Activity() {
                 val (_, month, _) = triple
                 month
             }.mapValues { (_, days) ->
-                days.groupBy { (triple, _) ->
+                days.map { (triple, type) ->
                     val (_, _, dayOfMonth) = triple
-                    dayOfMonth
-                }.mapValues { (_, list) ->
-                    list.size.toString()
-                }
+                    dayOfMonth to type
+                }.toMap()
             }
         }
         result.setPayload(value = payload)
+        result.selectDate(
+            year = calendar[Calendar.YEAR],
+            month = calendar[Calendar.MONTH],
+            dayOfMonth = calendar[Calendar.DAY_OF_MONTH],
+            toMove = true
+        )
 
         result.onWeekChange = { year, weekOfYear ->
             val value = String.format("%04d/%02d", year, weekOfYear)
@@ -330,12 +341,12 @@ class MainActivity : Activity() {
 //            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
             val value = events.filter {
                 calendar.timeZone = timeZoneSource
-                calendar.timeInMillis = it.startTime
+                calendar.timeInMillis = it.getLong("dateFrom")
                 calendar.timeZone = timeZoneTarget
                 calendar[Calendar.YEAR] == year && calendar[Calendar.MONTH] == month && calendar[Calendar.DAY_OF_MONTH] == dayOfMonth
             }.joinToString {
                 calendar.timeZone = timeZoneSource
-                calendar.timeInMillis = it.startTime
+                calendar.timeInMillis = it.getLong("dateFrom")
                 calendar.timeZone = timeZoneTarget
                 String.format("%02d:%02d", calendar[Calendar.HOUR_OF_DAY], calendar[Calendar.MINUTE])
             }
@@ -496,8 +507,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         val context: Context = this
 //        val view = monthScrollerView(context)
-//        val view = weekScrollerView(context)
-        val view = scheduleView(context)
+        val view = weekScrollerView(context)
+//        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
             view.background = ColorDrawable(Color.WHITE)
