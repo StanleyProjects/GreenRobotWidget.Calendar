@@ -38,9 +38,4 @@ android {
 
 dependencies {
     implementation(project(":lib"))
-    implementation(
-        group = "org.jetbrains.kotlin",
-        name = "kotlin-stdlib",
-        version = "1.5.10"
-    )
 }

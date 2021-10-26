@@ -170,8 +170,11 @@ class MainActivity : Activity() {
         result.setPayloadBackgroundColor(value = Color.parseColor("#e0ebf4"))
         result.toSelectPayloadEmpty(value = true)
         val calendar = Calendar.getInstance(timeZone)
-        val payload: Map<Int, Map<Int, Map<Int, String>>> = events.map {
-            calendar.timeInMillis = it.startTime
+        val items = JSONArray(items).let {
+            (0 until it.length()).map { index -> it.getJSONObject(index) }
+        }
+        val payload: Map<Int, Map<Int, Map<Int, String>>> = items.map {
+            calendar.timeInMillis = it.getLong("dateFrom") * 1_000
             Triple(calendar[Calendar.YEAR], calendar[Calendar.MONTH], calendar[Calendar.DAY_OF_MONTH]) to it
         }.groupBy { (triple, _) ->
             val (year, _, _) = triple
@@ -200,17 +203,17 @@ class MainActivity : Activity() {
             val value = String.format("%04d/%02d", year, month)
             showToast(value)
         }
-        result.toChangeSelectedDate(value = false)
+        result.toChangeSelectedDate(value = true)
         result.onSelectDate = { year, month, dayOfMonth ->
 //            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
-            val value = events.filter {
+            val value = items.filter {
                 calendar.timeZone = timeZoneSource
-                calendar.timeInMillis = it.startTime
+                calendar.timeInMillis = it.getLong("dateFrom") * 1_000
                 calendar.timeZone = timeZoneTarget
                 calendar[Calendar.YEAR] == year && calendar[Calendar.MONTH] == month && calendar[Calendar.DAY_OF_MONTH] == dayOfMonth
             }.joinToString {
                 calendar.timeZone = timeZoneSource
-                calendar.timeInMillis = it.startTime
+                calendar.timeInMillis = it.getLong("dateFrom") * 1_000
                 calendar.timeZone = timeZoneTarget
                 String.format("%02d:%02d", calendar[Calendar.HOUR_OF_DAY], calendar[Calendar.MINUTE])
             }
@@ -506,8 +509,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-//        val view = monthScrollerView(context)
-        val view = weekScrollerView(context)
+        val view = monthScrollerView(context)
+//        val view = weekScrollerView(context)
 //        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
