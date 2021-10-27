@@ -18,6 +18,7 @@ import sp.grw.calendar.entity.YearWeek
 import sp.grw.calendar.entity.isPresent
 import sp.grw.calendar.util.AndroidUtil.getTextHeight
 import sp.grw.calendar.util.DateUtil
+import sp.grw.calendar.util.DateUtil.getWeekOfYear
 import sp.grw.calendar.util.DateUtil.toYearMonth
 import sp.grw.calendar.util.DateUtil.toYearMonthDay
 import sp.grw.calendar.util.DateUtil.toYearWeek
@@ -120,10 +121,11 @@ class WeekScrollerView(context: Context) : View(context) {
                 maxWeek = max.weekOfYear
             )
         }
+
         /**
          * @return Map<Int(Year), Set<Int(Week)>>
          */
-        private fun onlyWeeksWithDays(
+        internal fun onlyWeeksWithDays(
             payload: Payload,
             firstDayOfWeek: Int,
             timeZone: TimeZone,
@@ -143,10 +145,85 @@ class WeekScrollerView(context: Context) : View(context) {
             }
             return result
         }
+
+        internal fun MutableMap<Int, MutableSet<Int>>.offsetBefore(
+            firstDayOfWeek: Int,
+            timeZone: TimeZone,
+            year: Int,
+            week: Int,
+            target: Calendar
+        ) {
+            val calendar = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            )
+            calendar[Calendar.YEAR] = year
+            calendar[Calendar.DAY_OF_WEEK] = DateUtil.getDayOfWeekAfter(dayOfWeek = firstDayOfWeek, after = DateUtil.DAYS_IN_WEEK - 1)
+            calendar[Calendar.WEEK_OF_YEAR] = week
+            while (true) {
+                val weekOfYear = calendar.getWeekOfYear(firstDayOfWeek = firstDayOfWeek)
+                if (weekOfYear == 1) {
+                    calendar[Calendar.YEAR] = calendar[Calendar.YEAR] - 1
+                    calendar[Calendar.DAY_OF_YEAR] = calendar.getActualMaximum(Calendar.DAY_OF_YEAR)
+                } else {
+                    calendar[Calendar.DAY_OF_WEEK] = DateUtil.getDayOfWeekAfter(dayOfWeek = firstDayOfWeek, after = DateUtil.DAYS_IN_WEEK - 1)
+                    calendar[Calendar.DAY_OF_YEAR] = calendar[Calendar.DAY_OF_YEAR] - DateUtil.DAYS_IN_WEEK
+                }
+                val targetYear = target[Calendar.YEAR]
+                val currentYear = calendar[Calendar.YEAR]
+                if (targetYear > currentYear) {
+                    break
+                } else if (targetYear == currentYear) {
+                    if (target[Calendar.MONTH] > calendar[Calendar.MONTH]) break
+                }
+                getOrPut(currentYear) {
+                    mutableSetOf()
+                }.add(calendar.getWeekOfYear(firstDayOfWeek = firstDayOfWeek))
+            }
+        }
+
+        internal fun MutableMap<Int, MutableSet<Int>>.offsetAfter(
+            firstDayOfWeek: Int,
+            timeZone: TimeZone,
+            year: Int,
+            week: Int,
+            target: Calendar
+        ) {
+            val calendar = DateUtil.calendar(
+                firstDayOfWeek = firstDayOfWeek,
+                timeZone = timeZone
+            )
+            calendar[Calendar.YEAR] = year
+            calendar[Calendar.DAY_OF_WEEK] = firstDayOfWeek
+            calendar[Calendar.WEEK_OF_YEAR] = week
+            while (true) {
+                val newWeek = calendar.getWeekOfYear(firstDayOfWeek = firstDayOfWeek) + 1
+//                val actualMaximumWeek = calendar.getActualMaximum(Calendar.WEEK_OF_YEAR)
+                val actualMaximumWeek = 53 // todo
+                if (newWeek > actualMaximumWeek) {
+                    calendar[Calendar.YEAR] = calendar[Calendar.YEAR] + 1
+                    calendar[Calendar.MONTH] = Calendar.JANUARY
+                    calendar[Calendar.DAY_OF_MONTH] = 1
+                } else {
+                    calendar[Calendar.DAY_OF_WEEK] = firstDayOfWeek
+                    calendar[Calendar.WEEK_OF_YEAR] = newWeek
+                }
+                val targetYear = target[Calendar.YEAR]
+                if (targetYear < calendar[Calendar.YEAR]) {
+                    break
+                } else if (targetYear == calendar[Calendar.YEAR]) {
+                    if (target[Calendar.MONTH] < calendar[Calendar.MONTH]) break
+                }
+                getOrPut(calendar[Calendar.YEAR]) {
+                    mutableSetOf()
+                }.add(calendar.getWeekOfYear(firstDayOfWeek = firstDayOfWeek))
+            }
+        }
+
         /**
          * @return Map<Int(Year), Set<Int(Week)>>
          */
-        private fun getWeeks(
+        internal fun getWeeks(
             payload: Payload,
             firstDayOfWeek: Int,
             timeZone: TimeZone,
@@ -172,9 +249,8 @@ class WeekScrollerView(context: Context) : View(context) {
                     isEmptyTodayWeekSkipped = isEmptyTodayWeekSkipped
                 )
             }
-            if (result.isEmpty()) return emptyMap() // todo
+//            if (result.isEmpty()) return emptyMap() // todo
             if (monthOffsetBefore == 0 && monthOffsetAfter == 0) return result
-            val offset = mutableMapOf<Int, MutableSet<Int>>()
             val calendar = DateUtil.calendar(
                 firstDayOfWeek = firstDayOfWeek,
                 timeZone = timeZone
@@ -183,6 +259,7 @@ class WeekScrollerView(context: Context) : View(context) {
             val minWeek = result[minYear]!!.minByOrNull { it }!!
             val minMonth = calendar.let {
                 it[Calendar.YEAR] = minYear
+                it[Calendar.DAY_OF_WEEK] = DateUtil.getDayOfWeekAfter(dayOfWeek = firstDayOfWeek, after = DateUtil.DAYS_IN_WEEK - 1)
                 it[Calendar.WEEK_OF_YEAR] = minWeek
                 it[Calendar.MONTH]
             }
@@ -210,31 +287,24 @@ class WeekScrollerView(context: Context) : View(context) {
                 it[Calendar.YEAR] = maxYear
                 it[Calendar.MONTH] = maxMonth + monthOffsetAfter - 1
             }
+            val offset = mutableMapOf<Int, MutableSet<Int>>()
             if (monthOffsetBefore > 0) {
-                calendar[Calendar.YEAR] = minYear
-                calendar[Calendar.WEEK_OF_YEAR] = minWeek
-                while (true) {
-                    calendar[Calendar.WEEK_OF_YEAR] = calendar[Calendar.WEEK_OF_YEAR] - 1
-                    calendar[Calendar.DAY_OF_WEEK] = DateUtil.getDayOfWeekAfter(dayOfWeek = firstDayOfWeek, after = DateUtil.DAYS_IN_WEEK - 1)
-                    if (minTarget[Calendar.YEAR] > calendar[Calendar.YEAR]) break
-                    if (minTarget[Calendar.MONTH] > calendar[Calendar.MONTH]) break
-                    offset.getOrPut(calendar[Calendar.YEAR]) {
-                        mutableSetOf()
-                    }.add(calendar[Calendar.WEEK_OF_YEAR])
-                }
+                offset.offsetBefore(
+                    firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone,
+                    year = minYear,
+                    week = minWeek,
+                    target = minTarget
+                )
             }
             if (monthOffsetAfter > 0) {
-                calendar[Calendar.YEAR] = maxYear
-                calendar[Calendar.WEEK_OF_YEAR] = maxWeek
-                while (true) {
-                    calendar[Calendar.WEEK_OF_YEAR] = calendar[Calendar.WEEK_OF_YEAR] + 1
-                    calendar[Calendar.DAY_OF_WEEK] = firstDayOfWeek
-                    if (maxTarget[Calendar.YEAR] < calendar[Calendar.YEAR]) break
-                    if (maxTarget[Calendar.MONTH] < calendar[Calendar.MONTH]) break
-                    offset.getOrPut(calendar[Calendar.YEAR]) {
-                        mutableSetOf()
-                    }.add(calendar[Calendar.WEEK_OF_YEAR])
-                }
+                offset.offsetAfter(
+                    firstDayOfWeek = firstDayOfWeek,
+                    timeZone = timeZone,
+                    year = maxYear,
+                    week = maxWeek,
+                    target = maxTarget
+                )
             }
             return (offset.asSequence() + result.asSequence())
                 .groupBy { (year, _) -> year }

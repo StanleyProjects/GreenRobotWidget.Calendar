@@ -261,8 +261,8 @@ class MainActivity : Activity() {
         result.setPadding(0, px(dp = 9f).toInt(), 0, px(dp = 1f).toInt())
         result.setTimeZone(value = timeZoneTarget)
         result.setFirstDayOfWeek(value = firstDayOfWeek)
-        result.toSkipEmptyWeeks(value = false)
-        result.toSkipEmptyTodayWeek(value = false)
+        result.toSkipEmptyWeeks(value = true)
+        result.toSkipEmptyTodayWeek(value = true)
         result.toSelectTodayAuto(value = true)
         result.setActiveType(value = ActiveType.ALL)
         result.setMonthOffsetBefore(value = 2)
@@ -302,12 +302,31 @@ class MainActivity : Activity() {
         result.setPayloadColor(value = Color.parseColor("#af1833"))
         result.toSelectPayloadEmpty(value = true)
         val calendar = Calendar.getInstance()
-        val json = "{\"data\":{\"items\":[]}}"
-        val events = JSONObject(json).getJSONObject("data").getJSONArray("items").let {
+        val items = JSONArray(items).let {
             (0 until it.length()).map { index -> it.getJSONObject(index) }
         }
-        val payload: Map<Int, Map<Int, Map<Int, String>>> = events.map {
-            calendar.timeInMillis = (it.getLong("dateFrom") ?: 0) * 1000
+//        val items = setOf(
+//            2021 to mapOf(
+//                Calendar.JANUARY to mapOf(
+//                    1 to "2021/${Calendar.JANUARY}/1"
+//                ),
+//                Calendar.DECEMBER to mapOf(
+//                    31 to "2021/${Calendar.DECEMBER}/31"
+//                )
+//            )
+//        ).map { (year, months) ->
+//            months.map { (month, days) ->
+//                days.map { (day, title) ->
+//                    val c = Calendar.getInstance()
+//                    c.set(Calendar.YEAR, year)
+//                    c.set(Calendar.MONTH, month)
+//                    c.set(Calendar.DAY_OF_MONTH, day)
+//                    JSONObject().put("dateFrom", c.timeInMillis / 1_000).put("type", JSONObject().put("title", title))
+//                }
+//            }.flatten()
+//        }.flatten()
+        val payload: Map<Int, Map<Int, Map<Int, String>>> = items.map {
+            calendar.timeInMillis = it.getLong("dateFrom") * 1_000
             Triple(
                 calendar[Calendar.YEAR],
                 calendar[Calendar.MONTH],
@@ -342,14 +361,14 @@ class MainActivity : Activity() {
         result.toChangeSelectedDate(value = true)
         result.onSelectDate = { year, month, dayOfMonth ->
 //            val value = String.format("%04d/%02d/%02d", year, month, dayOfMonth)
-            val value = events.filter {
+            val value = items.filter {
                 calendar.timeZone = timeZoneSource
-                calendar.timeInMillis = it.getLong("dateFrom")
+                calendar.timeInMillis = it.getLong("dateFrom") * 1_000
                 calendar.timeZone = timeZoneTarget
                 calendar[Calendar.YEAR] == year && calendar[Calendar.MONTH] == month && calendar[Calendar.DAY_OF_MONTH] == dayOfMonth
             }.joinToString {
                 calendar.timeZone = timeZoneSource
-                calendar.timeInMillis = it.getLong("dateFrom")
+                calendar.timeInMillis = it.getLong("dateFrom") * 1_000
                 calendar.timeZone = timeZoneTarget
                 String.format("%02d:%02d", calendar[Calendar.HOUR_OF_DAY], calendar[Calendar.MINUTE])
             }
@@ -509,8 +528,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-        val view = monthScrollerView(context)
-//        val view = weekScrollerView(context)
+//        val view = monthScrollerView(context)
+        val view = weekScrollerView(context)
 //        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)

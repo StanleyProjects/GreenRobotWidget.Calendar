@@ -9,15 +9,19 @@ plugins {
 }
 
 android {
-    compileSdkVersion(30)
-    buildToolsVersion("30.0.3")
+    compileSdk = 30
+    buildToolsVersion = "30.0.3"
 
     defaultConfig {
-        minSdkVersion(16)
-        targetSdkVersion(30)
+        minSdk = 16
+        targetSdk = 30
     }
 
     sourceSets.all {
         java.srcDir("src/$name/kotlin")
     }
+}
+
+dependencies {
+    testImplementation("junit:junit:4.13.1")
 }

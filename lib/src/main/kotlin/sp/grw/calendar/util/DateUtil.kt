@@ -27,6 +27,25 @@ internal object DateUtil {
         return YearWeek(year = this[Calendar.YEAR], weekOfYear = this[Calendar.WEEK_OF_YEAR])
     }
 
+    fun Calendar.getWeekOfYear(firstDayOfWeek: Int): Int {
+        this.firstDayOfWeek = firstDayOfWeek
+        val calendar = Calendar.getInstance()
+        calendar.firstDayOfWeek = firstDayOfWeek
+        calendar[Calendar.YEAR] = this[Calendar.YEAR]
+        calendar[Calendar.MONTH] = Calendar.JANUARY
+        calendar[Calendar.DAY_OF_MONTH] = 1
+        val dayOfWeek = calendar[Calendar.DAY_OF_WEEK]
+        val dif = if (dayOfWeek > firstDayOfWeek) {
+            dayOfWeek - firstDayOfWeek
+        } else if (dayOfWeek == firstDayOfWeek) {
+            0
+        } else {
+            dayOfWeek + DAYS_IN_WEEK - firstDayOfWeek
+        }
+        val dayOfYear = this[Calendar.DAY_OF_YEAR]
+        return (dayOfYear + dif - 1) / DAYS_IN_WEEK + 1
+    }
+
     fun calculateWeeksInMonth(year: Int, month: Int, firstDayOfWeek: Int): Int {
         val calendar = Calendar.getInstance()
         calendar.firstDayOfWeek = firstDayOfWeek

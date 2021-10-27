@@ -1,6 +1,7 @@
 package sp.grw.calendar.entity
 
 import java.util.Calendar
+import sp.grw.calendar.util.DateUtil.getWeekOfYear
 
 internal class YearMonth(val year: Int, val month: Int) {
     override fun toString(): String {
@@ -96,7 +97,7 @@ internal class Payload(
                 calendar[Calendar.MONTH] = month
                 days.map { (dayOfMonth, _) ->
                     calendar[Calendar.DAY_OF_MONTH] = dayOfMonth
-                    calendar[Calendar.WEEK_OF_YEAR]
+                    calendar.getWeekOfYear(firstDayOfWeek = firstDayOfWeek)
                 }
             }.flatten().toSet()
             block(year, weeks)
