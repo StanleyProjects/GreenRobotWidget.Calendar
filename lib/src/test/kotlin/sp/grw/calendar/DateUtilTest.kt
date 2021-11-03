@@ -4,6 +4,7 @@ import java.util.Calendar
 import java.util.TimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import sp.grw.calendar.util.DateUtil
 import sp.grw.calendar.util.DateUtil.getWeekOfYear
 
 class DateUtilTest {
@@ -51,6 +52,110 @@ class DateUtilTest {
                 it[Calendar.DAY_OF_MONTH] = d
             }
             assertEquals("$y/$m/$d", expected, calendar.getWeekOfYear(firstDayOfWeek = firstDayOfWeek))
+        }
+    }
+
+    @Test
+    fun calculateWeeksInMonthTest() {
+        val firstDayOfWeek = Calendar.MONDAY
+        mapOf(
+            (2019 to Calendar.JANUARY) to 5,
+            (2019 to Calendar.FEBRUARY) to 5,
+            (2019 to Calendar.MAY) to 5,
+            (2019 to Calendar.SEPTEMBER) to 6,
+            (2019 to Calendar.DECEMBER) to 6,
+            (2020 to Calendar.JANUARY) to 5,
+            (2020 to Calendar.FEBRUARY) to 5,
+            (2020 to Calendar.MARCH) to 6,
+            (2020 to Calendar.APRIL) to 5,
+            (2021 to Calendar.MARCH) to 5,
+            (2021 to Calendar.FEBRUARY) to 4,
+            (2021 to Calendar.JANUARY) to 5,
+            (2022 to Calendar.JANUARY) to 6,
+            (2022 to Calendar.FEBRUARY) to 5,
+            (2022 to Calendar.MAY) to 6,
+            (2022 to Calendar.AUGUST) to 5,
+            (2022 to Calendar.SEPTEMBER) to 5,
+            (2022 to Calendar.OCTOBER) to 6
+        ).forEach { (y, m), expected ->
+            val actual = DateUtil.calculateWeeksInMonth(
+                year = y,
+                month = m,
+                firstDayOfWeek = firstDayOfWeek
+            )
+            assertEquals("$y/$m", expected, actual)
+        }
+    }
+
+    @Test
+    fun getDayOfWeekAfterTest() {
+        setOf(
+            Triple(Calendar.TUESDAY, 1, Calendar.WEDNESDAY),
+            Triple(Calendar.TUESDAY, 0, Calendar.TUESDAY),
+            Triple(Calendar.MONDAY, 14, Calendar.MONDAY),
+            Triple(Calendar.MONDAY, 13, Calendar.SUNDAY),
+            Triple(Calendar.MONDAY, 12, Calendar.SATURDAY),
+            Triple(Calendar.MONDAY, 11, Calendar.FRIDAY),
+            Triple(Calendar.MONDAY, 10, Calendar.THURSDAY),
+            Triple(Calendar.MONDAY, 9, Calendar.WEDNESDAY),
+            Triple(Calendar.MONDAY, 8, Calendar.TUESDAY),
+            Triple(Calendar.MONDAY, 7, Calendar.MONDAY),
+            Triple(Calendar.MONDAY, 6, Calendar.SUNDAY),
+            Triple(Calendar.MONDAY, 5, Calendar.SATURDAY),
+            Triple(Calendar.MONDAY, 4, Calendar.FRIDAY),
+            Triple(Calendar.MONDAY, 3, Calendar.THURSDAY),
+            Triple(Calendar.MONDAY, 2, Calendar.WEDNESDAY),
+            Triple(Calendar.MONDAY, 1, Calendar.TUESDAY),
+            Triple(Calendar.MONDAY, 0, Calendar.MONDAY)
+        ).forEach { (dayOfWeek, after, expected) ->
+            val actual = DateUtil.getDayOfWeekAfter(dayOfWeek = dayOfWeek, after = after)
+            assertEquals("$dayOfWeek/$after", expected, actual)
+        }
+    }
+
+    @Test
+    fun isWeekendDayTest() {
+        Calendar.MONDAY.also { firstDayOfWeek ->
+            setOf(
+                Calendar.MONDAY to false,
+                Calendar.TUESDAY to false,
+                Calendar.WEDNESDAY to false,
+                Calendar.THURSDAY to false,
+                Calendar.FRIDAY to false,
+                Calendar.SATURDAY to true,
+                Calendar.SUNDAY to true
+            ).forEach { (dayOfWeek, expected) ->
+                val actual = DateUtil.isWeekendDay(firstDayOfWeek = firstDayOfWeek, dayOfWeek = dayOfWeek)
+                assertEquals("$dayOfWeek", expected, actual)
+            }
+        }
+        Calendar.TUESDAY.also { firstDayOfWeek ->
+            setOf(
+                Calendar.MONDAY to true,
+                Calendar.TUESDAY to false,
+                Calendar.WEDNESDAY to false,
+                Calendar.THURSDAY to false,
+                Calendar.FRIDAY to false,
+                Calendar.SATURDAY to false,
+                Calendar.SUNDAY to true
+            ).forEach { (dayOfWeek, expected) ->
+                val actual = DateUtil.isWeekendDay(firstDayOfWeek = firstDayOfWeek, dayOfWeek = dayOfWeek)
+                assertEquals("$dayOfWeek", expected, actual)
+            }
+        }
+        Calendar.WEDNESDAY.also { firstDayOfWeek ->
+            setOf(
+                Calendar.MONDAY to true,
+                Calendar.TUESDAY to true,
+                Calendar.WEDNESDAY to false,
+                Calendar.THURSDAY to false,
+                Calendar.FRIDAY to false,
+                Calendar.SATURDAY to false,
+                Calendar.SUNDAY to false
+            ).forEach { (dayOfWeek, expected) ->
+                val actual = DateUtil.isWeekendDay(firstDayOfWeek = firstDayOfWeek, dayOfWeek = dayOfWeek)
+                assertEquals("$dayOfWeek", expected, actual)
+            }
         }
     }
 }

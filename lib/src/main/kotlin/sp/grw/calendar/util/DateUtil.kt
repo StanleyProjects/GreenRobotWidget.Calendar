@@ -51,13 +51,24 @@ internal object DateUtil {
         calendar.firstDayOfWeek = firstDayOfWeek
         calendar[Calendar.YEAR] = year
         calendar[Calendar.MONTH] = month
-        val min = calendar.getActualMinimum(Calendar.WEEK_OF_MONTH)
-        val max = calendar.getActualMaximum(Calendar.WEEK_OF_MONTH)
-        return max - min
+        calendar[Calendar.DAY_OF_MONTH] = 1
+        val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val dayOfWeek = calendar[Calendar.DAY_OF_WEEK]
+        if (daysInMonth == 28 && dayOfWeek == firstDayOfWeek) {
+            return 4
+        }
+        if (daysInMonth < 30) return 5
+        if (dayOfWeek == getDayOfWeekAfter(dayOfWeek = firstDayOfWeek, after = DAYS_IN_WEEK - 1)) {
+            return 6
+        }
+        if (daysInMonth == 31 && dayOfWeek == getDayOfWeekAfter(dayOfWeek = firstDayOfWeek, after = DAYS_IN_WEEK - 2)) {
+            return 6
+        }
+        return 5
     }
 
     fun getDayOfWeekAfter(dayOfWeek: Int, after: Int): Int {
-        return (dayOfWeek + after) % DAYS_IN_WEEK
+        return (dayOfWeek + after - 1) % DAYS_IN_WEEK + 1
     }
 
     fun isWeekendDay(firstDayOfWeek: Int, dayOfWeek: Int): Boolean {

@@ -135,6 +135,24 @@ class MainActivity : Activity() {
         return dp * resources.displayMetrics.density
     }
 
+    private fun getStringMonth(month: Int): String {
+        return when (month) {
+            Calendar.JANUARY -> "JANUARY"
+            Calendar.FEBRUARY -> "FEBRUARY"
+            Calendar.MARCH -> "MARCH"
+            Calendar.APRIL -> "APRIL"
+            Calendar.MAY -> "MAY"
+            Calendar.JUNE -> "JUNE"
+            Calendar.JULY -> "JULY"
+            Calendar.AUGUST -> "AUGUST"
+            Calendar.SEPTEMBER -> "SEPTEMBER"
+            Calendar.OCTOBER -> "OCTOBER"
+            Calendar.NOVEMBER -> "NOVEMBER"
+            Calendar.DECEMBER -> "DECEMBER"
+            else -> error("Month $month is not supported!")
+        }
+    }
+
     private fun monthScrollerView(context: Context): View {
         val result = MonthScrollerView(context)
 
@@ -172,7 +190,18 @@ class MainActivity : Activity() {
         val calendar = Calendar.getInstance(timeZone)
         val items = JSONArray(items).let {
             (0 until it.length()).map { index -> it.getJSONObject(index) }
-        }
+        } + JSONObject("""
+            {
+                "dateFrom": 1612904400,
+                "dateTo": 1612918800,
+                "topic": {
+                  "title": "Заявка на звонок"
+                },
+                "type": {
+                  "title": "Звонок"
+                }
+              }
+        """.trimIndent())
         val payload: Map<Int, Map<Int, Map<Int, String>>> = items.map {
             calendar.timeInMillis = it.getLong("dateFrom") * 1_000
             Triple(calendar[Calendar.YEAR], calendar[Calendar.MONTH], calendar[Calendar.DAY_OF_MONTH]) to it
@@ -200,7 +229,7 @@ class MainActivity : Activity() {
         result.setNonActiveAlpha(value = (255 * 0.5f).toInt())
 
         result.onMonthChange = { year, month ->
-            val value = String.format("%04d/%02d", year, month)
+            val value = String.format("%04d/%02d ${getStringMonth(month)}", year, month)
             showToast(value)
         }
         result.toChangeSelectedDate(value = true)
@@ -528,8 +557,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val context: Context = this
-//        val view = monthScrollerView(context)
-        val view = weekScrollerView(context)
+        val view = monthScrollerView(context)
+//        val view = weekScrollerView(context)
 //        val view = scheduleView(context)
         setContentView(FrameLayout(context).also {
             it.background = ColorDrawable(Color.BLACK)
